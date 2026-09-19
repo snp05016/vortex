@@ -3,13 +3,13 @@
 #include <cstddef>	   // for size_t
 enum class TokenKind { // Using an enum because the token kinds are fixed.
 	// Keywords
-	KW_FN,
-	KW_LET,
-	KW_IF,
-	KW_ELSE,
-	KW_WHILE,
-	KW_FOR,
-	KW_RETURN,
+	KW_FN, // "fn"
+	KW_LET, // "let" 
+	KW_IF, // "if"
+	KW_ELSE, // "else"
+	KW_WHILE, // "while"
+	KW_FOR, // "for"
+	KW_RETURN, // "return"
 	KW_STRUCT,
 	KW_MUT,
 	KW_IN,
@@ -25,32 +25,32 @@ enum class TokenKind { // Using an enum because the token kinds are fixed.
 	KW_F64,
 	KW_STRING,
 	// Operators
-	OP_PLUS,
-	OP_MINUS,
-	OP_MULTIPLY,
-	OP_DIVIDE,
-	OP_ASSIGN,
-	OP_EQUAL,
-	OP_NOT_EQUAL,
-	OP_LESS,
-	OP_GREATER,
-	OP_LESS_EQUAL,
-	OP_GREATER_EQUAL,
-	OP_LOGICAL_AND,
-	OP_LOGICAL_OR,
-	OP_LOGICAL_NOT,
-	OP_BITWISE_AND,
-	OP_BITWISE_OR,
-	OP_BITWISE_XOR,
-	OP_BITWISE_NOT,
-	OP_LEFT_SHIFT,
-	OP_RIGHT_SHIFT,
-	OP_MODULO,
-	OP_PLUS_ASSIGN,
-	OP_MINUS_ASSIGN,
-	OP_MULTIPLY_ASSIGN,
-	OP_DIVIDE_ASSIGN,
-	OP_MODULO_ASSIGN,
+	OP_PLUS, // +
+	OP_MINUS, // -
+	OP_MULTIPLY, // *
+	OP_DIVIDE, // /
+	OP_ASSIGN, // =
+	OP_EQUAL, // ==
+	OP_NOT_EQUAL, // !=
+	OP_LESS, // <
+	OP_GREATER, // >
+	OP_LESS_EQUAL, // <=
+	OP_GREATER_EQUAL, // >=
+	OP_LOGICAL_AND, // &&
+	OP_LOGICAL_OR, // ||
+	OP_LOGICAL_NOT, // !
+	OP_BITWISE_AND, // &
+	OP_BITWISE_OR, // |
+	OP_BITWISE_XOR, // ^
+	OP_BITWISE_NOT, // ~
+	OP_LEFT_SHIFT, // <<
+	OP_RIGHT_SHIFT, // >>
+	OP_MODULO, // %
+	OP_PLUS_ASSIGN, // +=
+	OP_MINUS_ASSIGN, // -=
+	OP_MULTIPLY_ASSIGN, // *=
+	OP_DIVIDE_ASSIGN, // /=
+	OP_MODULO_ASSIGN, // %=
 	// Punctuation
 	PUNC_LPAREN,	// (
 	PUNC_RPAREN,	// )
