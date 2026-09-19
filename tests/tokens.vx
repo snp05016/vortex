@@ -1,0 +1,17 @@
+fn token_test(value: f32, enabled: bool) -> void {
+    let integer = 42;
+    let binary = 0b1010;
+    let decimal = 3.14;
+    let scientific = 1.5e+4;
+    let message = "hello\nVortex";
+    let letter = 'V';
+    let escaped = '\n';
+    let flag = true && false || !false;
+    value += 2.0;
+    value -= 1.0;
+    value *= 3.0;
+    value /= 4.0;
+    integer %= 2;
+    let inclusive = 0..=10;
+    let exclusive = 0..10;
+}
