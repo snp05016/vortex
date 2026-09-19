@@ -1,0 +1,6 @@
+// A small Vortex lexer test.
+fn main() {
+    /* Block comments should be ignored. */
+    let value: i32 = 10;
+    let result = value + 5;
+}
