@@ -1,0 +1,13 @@
+
+
+struct{ 
+	let x: i32;
+	let y: i64;
+} s;
+
+
+fn main(){
+	s h1;
+	h1.x = 5;
+	h2.y = 3404030430340;
+}
