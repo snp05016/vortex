@@ -47,6 +47,26 @@ calculate(value)
 Expressions can contain other expressions. In `value + 10`, both `value` and
 `10` are child expressions.
 
+#### Expression subtypes: quick handling map
+
+| Subtype | How to spot it | What to do with it |
+| --- | --- | --- |
+| Literal | A value written directly: `42`, `true`, `"hi"` | Create a literal node and record its value and type. |
+| Identifier | A name used as a value: `count` | Resolve the name in the symbol table, then use its declared type. |
+| Grouping | An expression in parentheses: `(a + b)` | Parse the inside first; the parentheses usually need no AST node. |
+| Unary | One prefix operator: `-value`, `!ready`, `&mut item` | Parse one operand, then check that the operator accepts its type. |
+| Binary | Two operands with an operator: `a + b`, `a < b` | Respect precedence, parse left and right children, then type-check both. Binary kinds include arithmetic, equality, comparison, logical, bitwise, and shift. |
+| Range | Two endpoints joined by `..` or `..=` | Check compatible endpoint types and whether the end is exclusive or inclusive. |
+| Call or cast | A value followed by arguments: `add(a, b)` or `f32(count)` | Resolve the callee; then decide whether it is a function call or type conversion and check the arguments. |
+| Index | Brackets after a value: `items[i]` | Check that the base is indexable and each index has an allowed integer type. |
+| Field access | A dot and field name: `point.x` | Resolve the base type, find the field, and use the field's type. |
+| Array or repeat array | `[1, 2, 3]` or `[0; 16]` | Check element types agree and record the fixed shape. |
+| Struct construction | A type name with fields: `Point { x: 1.0, y: 2.0 }` | Resolve the struct and check required, unknown, duplicate, and mistyped fields. |
+
+`primary` and `postfix` are useful parser categories rather than extra semantic
+subtypes. A primary starts an expression; postfix operations extend it with a
+call, index, or field access.
+
 ### Statement
 
 A statement tells the program to do something:
@@ -59,6 +79,21 @@ return value;
 
 Most simple Vortex statements end with `;`. Control-flow statements and blocks
 do not need a trailing semicolon.
+
+#### Statement subtypes: quick handling map
+
+| Subtype | How to spot it | What to do with it |
+| --- | --- | --- |
+| Variable declaration | Starts with `let` | Create the local symbol, infer or check its type, and record mutability. |
+| Assignment | An assignable target followed by `=`, `+=`, and similar operators | Validate the target, require it to be mutable, and type-check the new value. |
+| Return | Starts with `return` | Check the optional value against the current function's return type. |
+| Expression statement | An expression followed by `;` | Process the expression and discard its result. |
+| If | Starts with `if` | Require a `bool` condition and process each branch in its own scope. |
+| While | Starts with `while` | Require a `bool` condition and process the body as a loop scope. |
+| For | Starts with `for name in` | Check the iterable expression, introduce the loop variable, and process the loop body. |
+| Break | `break;` | Accept it only inside a loop and target the nearest loop exit. |
+| Continue | `continue;` | Accept it only inside a loop and target the nearest next iteration. |
+| Block | Statements inside `{ ... }` | Create a nested scope and process its statements in order. |
 
 ### Declaration
 
@@ -76,6 +111,20 @@ struct Point {
 A local `let` is called a variable declaration, although the grammar also
 treats it as a kind of statement because it appears inside a block.
 
+#### Declaration subtypes: quick handling map
+
+| Subtype | Where it appears | What to do with it |
+| --- | --- | --- |
+| Function declaration | At the top level: `fn name(...)` | Register its name and full signature, then check its body in a new scope. |
+| Struct declaration | At the top level: `struct Name { ... }` | Register the type name, then collect and validate its fields. |
+| Variable declaration | Inside a block: `let` or `let mut` | Add the variable to the current scope after checking its initializer. |
+| Parameter declaration | Inside a function's parameter list | Add the parameter name and declared type to the function scope. |
+| Field declaration | Inside a struct declaration | Add the field name and type to that struct and reject duplicate names. |
+
+For a quick compiler rule: top-level declarations go in the global symbol
+table; parameters and local variables go in the current scope; fields belong
+to their struct's definition.
+
 ### Type
 
 A type describes the values an expression or variable may hold:
@@ -88,6 +137,19 @@ String
 &mut [f32; 16]
 Point
 ```
+
+#### Type subtypes: quick handling map
+
+| Subtype | Examples | What to do with it |
+| --- | --- | --- |
+| Primitive | `void`, `bool`, `char`, `i32`, `u32`, `usize`, `f32`, `f64`, `String` | Recognize it directly. Numeric primitives split into integers (`i32`, `u32`, `usize`) and floating point (`f32`, `f64`); the others have their own operation rules. |
+| Array | `[f32; 16]`, `[f32; 4, 4]` | Resolve the element type and record every fixed dimension. |
+| Reference | `&i32`, `&mut [f32; 16]` | Resolve the referred-to type and record whether the reference is mutable. |
+| User-defined | `Point` | Look up the name and require it to resolve to a declared type such as a struct. |
+
+Type annotations use these same four forms recursively. For example,
+`&mut [f32; 16]` is a mutable reference whose referred-to type is an array,
+whose element type is the primitive `f32`.
 
 ## Program structure
 
