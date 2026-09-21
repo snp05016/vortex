@@ -149,10 +149,11 @@ const char* token_kind_name(TokenKind kind) {
 	return "UNKNOWN_TOKEN";
 }
 class DebugVisitor {
-  public:
+ public:
 	void visit(const Token& token) {
-		std::cout << token_kind_name(token.kind) << ", Location: [" << token.location.start << ", "
-				  << token.location.length
-				  << "], Text: " << std::string(token.text, token.location.length) << std::endl;
+		std::cout << token_kind_name(token.kind) << ", Location: [" << token.location.start
+			  << ", " << token.location.length
+			  << "], Text: " << std::string(token.text, token.location.length)
+			  << std::endl;
 	}
 };
