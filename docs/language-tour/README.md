@@ -12,3 +12,4 @@ current v0.1 design first, then clearly marks features planned for later.
 7. [Kernels and parallel execution planned for later](07-kernels-and-parallel-execution.md)
 8. [Expressions](08-expressions.md)
 9. [Statements](09-statements.md)
+10. [Declarations](10-declarations.md)

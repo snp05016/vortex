@@ -1,4 +1,4 @@
-# Kernels and parallel execution planned for later
+ Kernels and parallel execution planned for later
 
 A kernel is a focused function that processes a large amount of numerical data.
 It can eventually run on a GPU or another accelerator. Kernels give the compiler
