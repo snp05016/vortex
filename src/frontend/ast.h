@@ -394,14 +394,14 @@ private:
 struct ForStmt : public Stmt {
 public:
   virtual ~ForStmt() = default;
-  ForStmt(SourceLocation location, std::unique_ptr<Stmt> init,
-          std::unique_ptr<RangeExpr> iterable_, std::unique_ptr<Stmt> body)
+  ForStmt(SourceLocation location, 
+          std::unique_ptr<Expr> iterable_, std::unique_ptr<Stmt> body)
       : Stmt(location), iterable_(std::move(iterable_)),
         body_(std::move(body)) {}
 
 private:
-  std::string itereable_name_;
-  std::unique_ptr<RangeExpr> iterable_; // for i in 0..10 / for i in 0..=10
+  std::string itereable_;
+  std::unique_ptr<Expr> iterable_; // for i in 0..10 / for i in 0..=10, can be any expression
   std::unique_ptr<Stmt> body_;
 };
 /* represents a statement that exits the nearest loop. */
@@ -417,6 +417,7 @@ public:
   explicit ContinueStmt(SourceLocation location) : Stmt(location) {}
 };
 /* represents a statement block containing an ordered list of statements. */
+// anything in a block { statment* ; }
 struct BlockStmt : public Stmt {
 public:
   virtual ~BlockStmt() = default;
@@ -555,3 +556,4 @@ private:
   std::unique_ptr<Type> referenced_type_;
   bool is_mutable_;
 };
+
