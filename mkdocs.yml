@@ -60,6 +60,7 @@ nav:
   - Reference:
       - Language and compiler cheat sheet: language-and-compiler-cheatsheet.md
       - Language philosophy: philosophy.md
+      - Authorship and methodology: authorship.md
 
 markdown_extensions:
   - admonition

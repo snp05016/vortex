@@ -1,16 +1,13 @@
-<div class="home-hero">
-  <div>
-    <h1>Vortex language specification</h1>
-    <p>A precise, implementation-oriented specification for a statically typed language focused on numerical kernels, fixed shapes, and explicit mutation.</p>
-  </div>
-  <pre class="home-example"><code>fn dot(left: [f32; 4], right: [f32; 4]) -&gt; f32 {
-    let mut result: f32 = 0.0;
-    for index in 0..4 {
-        result += left[index] * right[index];
-    }
-    return result;
-}</code></pre>
-</div>
+# Vortex language specification
+
+<p class="page-intro">A precise, implementation-oriented specification for a statically typed language focused on numerical kernels, fixed shapes, and explicit mutation.</p>
+
+<nav class="quick-links" aria-label="Start reading">
+  <a href="specification/">Specification</a>
+  <a href="language-tour/">Language guide</a>
+  <a href="compiler/architecture/">Compiler guide</a>
+  <a href="language-and-compiler-cheatsheet/">Cheat sheet</a>
+</nav>
 
 Vortex v0.1 is an evolving language design and compiler project. This site
 separates the language contract from implementation guidance so that a parser,
@@ -22,26 +19,43 @@ type checker, runtime, and programmer can agree on the same behavior.
     the [implementation roadmap](roadmap.md) and tests before relying on a
     feature in the compiler.
 
-## Choose your path
+## Read the documentation
 
-<div class="chapter-grid">
-  <a class="chapter-link" href="specification/">
-    <strong>Read the specification</strong>
+<div class="document-index">
+  <div class="document-link">
+    <a href="specification/">Language specification</a>
     <span>Normative rules for syntax, types, behavior, and diagnostics.</span>
-  </a>
-  <a class="chapter-link" href="language-tour/">
-    <strong>Learn the language</strong>
-    <span>Example-driven chapters for writing small Vortex programs.</span>
-  </a>
-  <a class="chapter-link" href="compiler/architecture/">
-    <strong>Build the compiler</strong>
-    <span>Pass boundaries, AST ownership, parser design, and verification.</span>
-  </a>
-  <a class="chapter-link" href="language-and-compiler-cheatsheet/">
-    <strong>Look up a term</strong>
-    <span>A compact reference for language and compiler terminology.</span>
-  </a>
+  </div>
+  <div class="document-link">
+    <a href="language-tour/">Language guide</a>
+    <span>Example-driven chapters for learning to write Vortex programs.</span>
+  </div>
+  <div class="document-link">
+    <a href="compiler/architecture/">Compiler implementation</a>
+    <span>Pass boundaries, parser design, AST ownership, and verification.</span>
+  </div>
+  <div class="document-link">
+    <a href="language-and-compiler-cheatsheet/">Language and compiler cheat sheet</a>
+    <span>A compact lookup page for language and compiler terminology.</span>
+  </div>
 </div>
+
+## Specification chapters
+
+<ol class="chapter-list">
+  <li><span class="chapter-number">01</span><a href="specification/conformance/">Conformance and terminology</a><span>How to read normative requirements and determine whether an implementation conforms.</span></li>
+  <li><span class="chapter-number">02</span><a href="specification/lexical-structure/">Lexical structure</a><span>Source text, identifiers, literals, comments, keywords, and punctuation.</span></li>
+  <li><span class="chapter-number">03</span><a href="specification/declarations/">Programs and declarations</a><span>Translation units, functions, structs, scopes, and the program entry point.</span></li>
+  <li><span class="chapter-number">04</span><a href="specification/types-and-values/">Types and values</a><span>Primitive types, compound types, values, conversions, and type equivalence.</span></li>
+  <li><span class="chapter-number">05</span><a href="specification/expressions/">Expressions</a><span>Operators, calls, casts, indexing, field access, evaluation, and precedence.</span></li>
+  <li><span class="chapter-number">06</span><a href="specification/statements/">Statements and control flow</a><span>Bindings, assignment, return, blocks, branches, and loops.</span></li>
+  <li><span class="chapter-number">07</span><a href="specification/arrays/">Arrays and shapes</a><span>Fixed-size array types, construction, indexing, assignment, and nested arrays.</span></li>
+  <li><span class="chapter-number">08</span><a href="specification/structs/">Structs</a><span>Struct declarations, values, fields, nested structs, and array-valued fields.</span></li>
+  <li><span class="chapter-number">09</span><a href="specification/references/">References and mutability</a><span>Borrowed access, mutation permissions, assignment targets, and lifetime boundaries.</span></li>
+  <li><span class="chapter-number">10</span><a href="specification/diagnostics/">Diagnostics</a><span>Required errors, implementation limits, warnings, and source reporting.</span></li>
+  <li><span class="chapter-number">11</span><a href="specification/grammar/">Formal grammar</a><span>The parser-facing grammar and its relationship to semantic requirements.</span></li>
+  <li><span class="chapter-number">12</span><a href="specification/glossary/">Glossary</a><span>Definitions of the terms used throughout the specification.</span></li>
+</ol>
 
 ## v0.1 at a glance
 
@@ -101,6 +115,19 @@ When two documents disagree about v0.1 syntax, the
 [formal grammar](specification/grammar.md) is authoritative. When the grammar
 accepts a form whose meaning is constrained later, the relevant specification
 chapter defines the semantic rule.
+
+## Authorship and methodology
+
+Large language models were used heavily to save time on drafting, restructuring,
+and transferring design notes into documentation. The language specification
+itself was developed with both human intervention and LLM assistance. Human
+review remains part of resolving language decisions and checking the grammar,
+examples, and cross-page rules for inconsistencies.
+
+This process improves coverage but does not guarantee that the evolving
+specification is error-free. Contradictions and unclear requirements should be
+reported and resolved in the specification. Read the full
+[authorship and methodology statement](authorship.md).
 
 ## Design direction
 
