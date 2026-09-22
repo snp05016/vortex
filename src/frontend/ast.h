@@ -11,6 +11,12 @@
 // the node will be used to report errors and warnings in the source code. a
 // constrctor in C++ is a special function that runs everytime a new object is
 // created represents the base qualities for an ast node
+// for each constructor there is std::move that is used to transfer ownership of
+// the object being passed to the constructor. This is done to avoid unnecessary
+// copies of the object and to ensure that the object is properly cleaned up
+// when it is no longer needed. The std::move function is used to indicate that
+// the object being passed to the constructor can be "moved" rather than copied,
+// which can improve performance and reduce memory usage.
 class Node {
 public:
   virtual ~Node() =
@@ -77,7 +83,7 @@ public:
       default; // virtual destructor for proper cleanup of derived classes
   // create a new literal node with the location
   Literal(SourceLocation location, LiteralKind kind, LiteralValue value)
-      : Expr(location), kind_(kind), value_(std::move(value)) {}
+      : Expr(location), kind_(kind), value_(std::move(value)) {} // move will transfer the ownership of value from value ( param ) to value_ and avoid copying the value, which can be expensive for large objects. This is done to improve performance and reduce memory usage.
 
 private:
   // member variable to store the kind of literal
@@ -104,26 +110,27 @@ public:
   virtual ~Grp() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new group node with the location
-  Grp(SourceLocation location, std::unique_ptr<Expr> expr)
+  Grp(SourceLocation location, Expr expr)
       : Expr(location), expr_(std::move(expr)) {}
 
 private:
   // member variable to store the expression inside the group
-  std::unique_ptr<Expr> expr_;
+  Expr expr_;
 };
 enum class UnaryOp {
-  Negate,     // -x
-  LogicalNot, // !x
-  BitwiseNot, // ~x
-  Positive,   // +x
-  Reference,  // &x
+  Negate,       // -x
+  LogicalNot,   // !x
+  BitwiseNot,   // ~x
+  Positive,     // +x
+  Reference,    // &x
+  MutReference, // &mut x
 };
 /* represents an expression with one operand and one unary operator. */
 struct Unary : public Expr {
 public:
   virtual ~Unary() = default;
   // create a new unary node with the location
-  Unary(SourceLocation location, UnaryOp op, std::unique_ptr<Expr> operand)
+  Unary(SourceLocation location, UnaryOp op, Expr operand)
       : Expr(location), op_(op), operand_(std::move(operand)) {}
 
 private:
@@ -132,7 +139,7 @@ private:
   // member variable to store the operand of the unary expression
   // unique_ptr is a smart pointer that owns and manages another object through
   // a pointer and disposes of that object when the unique_ptr goes out of scope
-  std::unique_ptr<Expr> operand_;
+  Expr operand_;
   // used unique_ptr because we wnat to ensure that the operand is properly
   // cleaned up when the unary object is destroyed, dint use Expr* because we
   // want to avoid memory leaks and dangling pointers, and unique_ptr provides
@@ -164,8 +171,7 @@ public:
   virtual ~BinaryExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new binary expression node with the location
-  BinaryExpr(SourceLocation location, BinOp op, std::unique_ptr<Expr> left,
-             std::unique_ptr<Expr> right)
+  BinaryExpr(SourceLocation location, BinOp op, Expr left, Expr right)
       : Expr(location), op_(op), left_(std::move(left)),
         right_(std::move(right)) {}
 
@@ -173,9 +179,9 @@ private:
   // member variable to store the operator of the binary expression
   BinOp op_;
   // member variable to store the left operand of the binary expression
-  std::unique_ptr<Expr> left_;
+  Expr left_;
   // member variable to store the right operand of the binary expression
-  std::unique_ptr<Expr> right_;
+  Expr right_;
 };
 /* represents a range expression with a start and an end. */
 struct RangeExpr : public Expr {
@@ -183,15 +189,16 @@ public:
   virtual ~RangeExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new range expression node with the location
-  RangeExpr(SourceLocation location, std::unique_ptr<Expr> start,
-            std::unique_ptr<Expr> end)
-      : Expr(location), start_(std::move(start)), end_(std::move(end)) {}
+  RangeExpr(SourceLocation location, Expr start, Expr end, bool is_inclusive)
+      : Expr(location), start_(std::move(start)), end_(std::move(end)), is_inclusive_(is_inclusive) {}
 
 private:
   // member variable to store the start of the range expression
-  std::unique_ptr<Expr> start_;
+  Expr start_;
   // member variable to store the end of the range expression
-  std::unique_ptr<Expr> end_;
+  Expr end_;
+  // member variable to store whether the range is inclusive
+  bool is_inclusive_;
 };
 /* represents a function call expression with arguments. */
 struct CallCastExpr : public Expr {
@@ -199,16 +206,16 @@ public:
   virtual ~CallCastExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new call cast expression node with the location
-  CallCastExpr(SourceLocation location, std::unique_ptr<Expr> function,
-               std::vector<std::unique_ptr<Expr>> arguments)
+  CallCastExpr(SourceLocation location, Expr function,
+               std::vector<Expr> arguments)
       : Expr(location), function_(std::move(function)),
         arguments_(std::move(arguments)) {}
 
 private:
   // member variable to store the function being called
-  std::unique_ptr<Expr> function_;
+  Expr function_;
   // member variable to store the arguments of the function call
-  std::vector<std::unique_ptr<Expr>> arguments_;
+  std::vector<Expr> arguments_;
 };
 /* represents an indexing expression that accesses an element. */
 struct IndexExpr : public Expr {
@@ -216,16 +223,15 @@ public:
   virtual ~IndexExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new index expression node with the location
-  IndexExpr(SourceLocation location, std::unique_ptr<Expr> collection,
-            std::unique_ptr<Expr> index)
+  IndexExpr(SourceLocation location, Expr collection, std::vector<Expr> index)
       : Expr(location), collection_(std::move(collection)),
         index_(std::move(index)) {}
 
 private:
   // member variable to store the collection being indexed
-  std::unique_ptr<Expr> collection_;
+  Expr collection_;
   // member variable to store the index expression
-  std::unique_ptr<Expr> index_;
+  std::vector<Expr> index_; // vector cuz we can have multi-dimensional arrays
 };
 /* represents an expression that accesses a named field. */
 struct FieldAccessExpr : public Expr {
@@ -233,14 +239,13 @@ public:
   virtual ~FieldAccessExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new field access expression node with the location
-  FieldAccessExpr(SourceLocation location, std::unique_ptr<Expr> object,
-                  std::string field_name)
+  FieldAccessExpr(SourceLocation location, Expr object, std::string field_name)
       : Expr(location), object_(std::move(object)),
         field_name_(std::move(field_name)) {}
 
 private:
   // member variable to store the object being accessed
-  std::unique_ptr<Expr> object_;
+  Expr object_;
   // member variable to store the field name being accessed, string cuz only the
   // name of hte field is needed
   std::string field_name_;
@@ -251,13 +256,30 @@ public:
   virtual ~ArrayExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new array expression node with the location
-  ArrayExpr(SourceLocation location,
-            std::vector<std::unique_ptr<Expr>> elements)
+  ArrayExpr(SourceLocation location, std::vector<Expr> elements)
       : Expr(location), elements_(std::move(elements)) {}
 
 private:
   // member variable to store the elements of the array expression
-  std::vector<std::unique_ptr<Expr>> elements_;
+  std::vector<Expr> elements_;
+};
+// represents an array expression that repeats a single element a specified
+// number of times. example) [0; 10] represents an array of 10 elements, all
+// initialized to 0.
+struct RepeatArrayExpr : public Expr {
+public:
+  virtual ~RepeatArrayExpr() =
+      default; // virtual destructor for proper cleanup of derived classes
+protected:
+  RepeatArrayExpr(SourceLocation location, Expr value_, Expr dimensions_)
+      : Expr(location), value_(std::move(value_)),
+        dimensions_(std::move(dimensions_)) {}
+
+private:
+  // member variable to store the value to be repeated
+  Expr value_;
+  // member variable to store the dimensions of the array
+  Expr dimensions_;
 };
 /* represents an expression that constructs a struct value. */
 struct StructConstructionExpr : public Expr {
@@ -265,9 +287,8 @@ public:
   virtual ~StructConstructionExpr() =
       default; // virtual destructor for proper cleanup of derived classes
   // create a new struct construction expression node with the location
-  StructConstructionExpr(
-      SourceLocation location, std::string struct_name,
-      std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields)
+  StructConstructionExpr(SourceLocation location, std::string struct_name,
+                         std::vector<std::pair<std::string, Expr>> fields)
       : Expr(location), struct_name_(std::move(struct_name)),
         fields_(std::move(fields)) {}
 
@@ -276,7 +297,7 @@ private:
   std::string struct_name_;
   // member variable to store the fields of the struct construction expression,
   // in the form <name> { <string> : <expr> }
-  std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields_;
+  std::vector<std::pair<std::string, Expr>> fields_;
 };
 // statments include:
 //      variable declartions
@@ -293,14 +314,13 @@ private:
 struct VarDeclStmt : public Stmt {
 public:
   virtual ~VarDeclStmt() = default;
-  VarDeclStmt(SourceLocation location, std::string var_name,
-              std::unique_ptr<Expr> expr)
+  VarDeclStmt(SourceLocation location, std::string var_name, Expr expr)
       : Stmt(location), var_name_(std::move(var_name)), expr_(std::move(expr)) {
   }
 
 private:
   std::string var_name_;
-  std::unique_ptr<Expr> expr_;
+  Expr expr_;
 };
 enum class AssignmentOperation {
   Assign,         // =
@@ -314,47 +334,47 @@ enum class AssignmentOperation {
 struct AssignmentStatement : public Stmt {
 public:
   virtual ~AssignmentStatement() = default;
-  AssignmentStatement(SourceLocation location, std::unique_ptr<Expr> lhs,
-                      std::unique_ptr<Expr> rhs, AssignmentOperation op)
+  AssignmentStatement(SourceLocation location, Expr lhs, Expr rhs,
+                      AssignmentOperation op)
       : Stmt(location), lhs_(std::move(lhs)), rhs_(std::move(rhs)), op_(op) {}
 
 private:
-  std::unique_ptr<Expr> lhs_;
-  std::unique_ptr<Expr> rhs_;
+  Expr lhs_;
+  Expr rhs_;
   AssignmentOperation op_;
 };
 /* represents a statement that returns a value from a function. */
 struct RetStmt : public Stmt {
 public:
   virtual ~RetStmt() = default;
-  RetStmt(SourceLocation location, std::unique_ptr<Expr> return_value)
+  RetStmt(SourceLocation location, Expr return_value)
       : Stmt(location), return_value_(std::move(return_value)) {}
 
 private:
-  std::unique_ptr<Expr> return_value_;
+  Expr return_value_;
 };
 /* represents a statement formed from an expression. */
 struct ExprStmt : public Stmt {
 public:
   virtual ~ExprStmt() = default;
-  ExprStmt(SourceLocation location, std::unique_ptr<Expr> expr)
+  ExprStmt(SourceLocation location, Expr expr)
       : Stmt(location), expr_(std::move(expr)) {}
 
 private:
-  std::unique_ptr<Expr> expr_;
+  Expr expr_;
 };
 /* represents a conditional statement with optional branches. */
 struct IfStmt : public Stmt {
 public:
   virtual ~IfStmt() = default;
-  IfStmt(SourceLocation location, std::unique_ptr<Expr> condition,
+  IfStmt(SourceLocation location, Expr condition,
          std::unique_ptr<Stmt> then_branch, std::unique_ptr<Stmt> else_branch)
       : Stmt(location), condition_(std::move(condition)),
         then_branch_(std::move(then_branch)),
         else_branch_(std::move(else_branch)) {}
 
 private:
-  std::unique_ptr<Expr> condition_;
+  Expr condition_;
   std::unique_ptr<Stmt> then_branch_;
   std::unique_ptr<Stmt> else_branch_;
 };
@@ -362,13 +382,12 @@ private:
 struct WhileStmt : public Stmt {
 public:
   virtual ~WhileStmt() = default;
-  WhileStmt(SourceLocation location, std::unique_ptr<Expr> condition,
-            std::unique_ptr<Stmt> body)
+  WhileStmt(SourceLocation location, Expr condition, std::unique_ptr<Stmt> body)
       : Stmt(location), condition_(std::move(condition)),
         body_(std::move(body)) {}
 
 private:
-  std::unique_ptr<Expr> condition_;
+  Expr condition_;
   std::unique_ptr<Stmt> body_;
 };
 /* represents a loop with initialization, condition, and increment steps. */
@@ -376,16 +395,13 @@ struct ForStmt : public Stmt {
 public:
   virtual ~ForStmt() = default;
   ForStmt(SourceLocation location, std::unique_ptr<Stmt> init,
-          std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> increment,
-          std::unique_ptr<Stmt> body)
-      : Stmt(location), init_(std::move(init)),
-        condition_(std::move(condition)), increment_(std::move(increment)),
+          std::unique_ptr<RangeExpr> iterable_, std::unique_ptr<Stmt> body)
+      : Stmt(location), iterable_(std::move(iterable_)),
         body_(std::move(body)) {}
 
 private:
-  std::unique_ptr<Stmt> init_;
-  std::unique_ptr<Expr> condition_;
-  std::unique_ptr<Stmt> increment_;
+  std::string itereable_name_;
+  std::unique_ptr<RangeExpr> iterable_; // for i in 0..10 / for i in 0..=10
   std::unique_ptr<Stmt> body_;
 };
 /* represents a statement that exits the nearest loop. */
@@ -422,31 +438,60 @@ private:
 struct VarDecl : public Decl {
 public:
   virtual ~VarDecl() = default;
-  VarDecl(SourceLocation location, std::string var_name,
+  VarDecl(SourceLocation location, bool is_mutable, std::string var_name,
           std::unique_ptr<Type> var_type, std::unique_ptr<Expr> initializer)
-      : Decl(location), var_name_(std::move(var_name)),
+      : Decl(location), is_mutable_(is_mutable), var_name_(std::move(var_name)),
         var_type_(std::move(var_type)), initializer_(std::move(initializer)) {}
 
 private:
+  bool is_mutable_;
   std::string var_name_;
   std::unique_ptr<Type> var_type_;
   std::unique_ptr<Expr> initializer_;
 };
-// represents function declaration
-struct FunctDecl : public Decl {
+// rep param decl, represents the parameter in a function. for example left:i32
+// in fn add(left:i32, right:i32) {}
+struct ParamDecl {
 public:
-  virtual ~FunctDecl() = default;
-  FunctDecl(
-      SourceLocation location, std::string function_name,
-      std::vector<std::pair<std::string, std::unique_ptr<Type>>> parameters,
-      std::unique_ptr<Type> return_type, std::unique_ptr<BlockStmt> body)
+  ParamDecl(SourceLocation location, std::string param_name,
+            std::unique_ptr<Type> param_type)
+      : location_(location), param_name_(std::move(param_name)),
+        param_type_(std::move(param_type)) {}
+
+private:
+  SourceLocation location_;
+  std::string param_name_;           // left
+  std::unique_ptr<Type> param_type_; // i32
+};
+// represent hte field type for struct, example) x:i32 in struct point { x: i32
+// , y:i32 }
+struct StructFieldDecl {
+public:
+  StructFieldDecl(SourceLocation location, std::string struct_param_name,
+                  std::unique_ptr<Type> struct_param_type)
+      : location_(location), struct_param_name(std::move(struct_param_name)),
+        struct_param_type(std::move(struct_param_type)) {}
+
+private:
+  SourceLocation location_;
+  std::string struct_param_name;           // x
+  std::unique_ptr<Type> struct_param_type; // i32
+};
+// represents function declaration
+struct FunctionDecl : public Decl {
+public:
+  virtual ~FunctionDecl() = default;
+  FunctionDecl(SourceLocation location, std::string function_name,
+               std::vector<ParamDecl> parameters,
+               std::unique_ptr<Type> return_type,
+               std::unique_ptr<BlockStmt> body)
       : Decl(location), function_name_(std::move(function_name)),
         parameters_(std::move(parameters)),
         return_type_(std::move(return_type)), body_(std::move(body)) {}
 
 private:
   std::string function_name_;
-  std::vector<std::pair<std::string, std::unique_ptr<Type>>> parameters_;
+  std::vector<ParamDecl> parameters_;
   std::unique_ptr<Type> return_type_;
   std::unique_ptr<BlockStmt> body_;
 };
@@ -455,41 +500,13 @@ struct StructDecl : public Decl {
 public:
   virtual ~StructDecl() = default;
   StructDecl(SourceLocation location, std::string struct_name,
-             std::vector<std::pair<std::string, std::unique_ptr<Type>>> fields)
+             std::vector<StructFieldDecl> fields)
       : Decl(location), struct_name_(std::move(struct_name)),
         fields_(std::move(fields)) {}
 
 private:
   std::string struct_name_;
-  std::vector<std::pair<std::string, std::unique_ptr<Type>>> fields_;
-};
-// rep param decl, represents the parameter in a function. for example left:i32
-// in fn add(left:i32, right:i32) {}
-struct ParamDecl : public Decl {
-public:
-  virtual ~ParamDecl() = default;
-  ParamDecl(SourceLocation location, std::string param_name,
-            std::unique_ptr<Type> param_type)
-      : Decl(location), param_name_(std::move(param_name)),
-        param_type_(std::move(param_type)) {}
-
-private:
-  std::string param_name_;           // left
-  std::unique_ptr<Type> param_type_; // i32
-};
-// represent hte field type for struct, example) x:i32 in struct point { x: i32
-// , y:i32 }
-struct StructFieldDecl : public Decl {
-public:
-  virtual ~StructFieldDecl() = default;
-  StructFieldDecl(SourceLocation location, std::string struct_param_name,
-                  std::unique_ptr<Type> struct_param_type)
-      : Decl(location), struct_param_name(std::move(struct_param_name)),
-        struct_param_type(std::move(struct_param_type)) {}
-
-private:
-  std::string struct_param_name;           // x
-  std::unique_ptr<Type> struct_param_type; // i32
+  std::vector<StructFieldDecl> fields_;
 };
 // type of primitive kind
 enum class PrimitiveTypeKind {
@@ -512,4 +529,29 @@ public:
 
 private:
   PrimitiveTypeKind primitive_type_;
+};
+struct ArrayType : public Type {
+public:
+  ArrayType(SourceLocation location, std::unique_ptr<Type> element_type,
+            std::vector<std::unique_ptr<Expr>> dimensions)
+      : Type(location), element_type_(std::move(element_type)),
+        dimensions_(std::move(dimensions)) {}
+private:
+  std::unique_ptr<Type> element_type_;
+  std::vector<std::unique_ptr<Expr>> dimensions_;
+};
+struct StructType : public Type {
+public:
+  StructType(SourceLocation location, std::string struct_name)
+      : Type(location), struct_name_(std::move(struct_name)) {}
+private:
+  std::string struct_name_;
+};
+struct ReferenceType : public Type {
+  public:
+    ReferenceType(SourceLocation location, std::unique_ptr<Type> referenced_type, bool is_mutable)
+        : Type(location), referenced_type_(std::move(referenced_type)), is_mutable_(is_mutable) {}
+private:
+  std::unique_ptr<Type> referenced_type_;
+  bool is_mutable_;
 };

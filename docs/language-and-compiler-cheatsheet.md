@@ -2,6 +2,74 @@
 
 Use this page when you remember the idea but forget the terminology.
 
+This is a quick-reference companion to the formal
+[Vortex v0.1 grammar](specification/grammar.md) and the implementation-focused
+[parser design assignment](compiler/parser-design.md). Use the grammar to settle
+exact syntax, this page to identify a concept quickly, and the parser design
+when writing parser code.
+
+## Contents
+
+- [Fast navigation](#fast-navigation)
+- [The shortest possible overview](#the-shortest-possible-overview)
+- [The four main pieces of a program](#the-four-main-pieces-of-a-program)
+  - [Expression](#expression)
+  - [Statement](#statement)
+  - [Declaration](#declaration)
+  - [Type](#type)
+- [Program structure](#program-structure)
+- [Every Vortex v0.1 statement](#every-vortex-v01-statement)
+- [Every Vortex v0.1 expression](#every-vortex-v01-expression)
+- [Array dimensions: expressions with fixed-size rules](#array-dimensions-expressions-with-fixed-size-rules)
+- [Operator terminology](#operator-terminology)
+- [Vortex types](#vortex-types)
+- [Lexer terminology](#lexer-terminology)
+- [Grammar terminology](#grammar-terminology)
+- [Parser terminology](#parser-terminology)
+- [AST terminology](#ast-terminology)
+- [Semantic and type-checking terminology](#semantic-and-type-checking-terminology)
+- [C++ implementation terminology used by Vortex](#c-implementation-terminology-used-by-vortex)
+- [One fully annotated example](#one-fully-annotated-example)
+- [Fast way to classify something](#fast-way-to-classify-something)
+
+## Fast navigation
+
+| If you are asking... | Go to... |
+| --- | --- |
+| "Does this produce a value?" | [Expression](#expression) |
+| "Does this perform an action?" | [Statement](#statement) |
+| "Does this introduce a name?" | [Declaration](#declaration) |
+| "Is this `i32`, an array, a reference, or a named type?" | [Type](#type) |
+| "Which AST child nodes does this syntax need?" | [AST terminology](#ast-terminology) and the [parser design](compiler/parser-design.md) |
+| "Is this invalid syntax or a type error?" | [Grammar terminology](#grammar-terminology) and [Semantic analysis](#semantic-analysis) |
+| "How do array dimension expressions work?" | [Array dimensions](#array-dimensions-expressions-with-fixed-size-rules) |
+| "Why is this child a `unique_ptr`?" | [`std::unique_ptr`](#stdunique_ptr) |
+
+### Quick allowed/not-allowed lookup
+
+| Area | You can write | You cannot write in v0.1 |
+| --- | --- | --- |
+| Top level | `fn`, `struct` declarations | top-level `let`, imports, enums, classes, type aliases |
+| Variables | `let value = 1;`, `let mut value: i32 = 1;` | an uninitialized declaration such as `let value;` |
+| Assignment | `value = 2;`, `point.x += 1.0;` | assignment inside another expression |
+| Conditions | `if expression { ... }`, `while expression { ... }` | brace-free statement bodies |
+| Loops | `for item in expression { ... }` | C-style `for (init; condition; step)` |
+| Arrays | `[1, 2]`, `[0; 2 + 2]`, `[i32; 2 + 2]` | empty `[]`; dimensions that fail fixed-size semantic rules |
+| Types | primitive, array, reference, or named type | tuple, enum, function, generic, or alias types |
+| Functions | parameters, optional return annotation, block body | default arguments or overloaded syntax not defined by the grammar |
+
+### Which compiler stage owns the question?
+
+| Stage | Main question | Example rejection |
+| --- | --- | --- |
+| Lexer | "Do these characters form known tokens?" | unterminated string or unknown character |
+| Parser | "Do these tokens have a valid structure?" | missing `)` or `;` |
+| Name resolver | "What declaration does this name refer to?" | unknown `Point` or `count` |
+| Type checker | "Do these values and operations have compatible types?" | `true + 1` |
+| Semantic checker | "Does this valid-looking construct obey contextual rules?" | `break;` outside a loop |
+| Constant checker | "Can this required compile-time expression be evaluated?" | runtime call used as a fixed array dimension |
+| Backend | "How is this valid program represented and executed?" | unsupported lowering after earlier checks succeed |
+
 ## The shortest possible overview
 
 ```text
@@ -47,6 +115,13 @@ calculate(value)
 Expressions can contain other expressions. In `value + 10`, both `value` and
 `10` are child expressions.
 
+**Expressions can:** produce values, appear as operands, initialize variables,
+be passed as arguments, and provide array dimensions.
+
+**Expressions cannot:** introduce top-level functions or structs, act as
+assignment statements, or replace a required statement terminator. An
+expression may still be rejected later when its type or context is wrong.
+
 #### Expression subtypes: quick handling map
 
 | Subtype | How to spot it | What to do with it |
@@ -60,7 +135,7 @@ Expressions can contain other expressions. In `value + 10`, both `value` and
 | Call or cast | A value followed by arguments: `add(a, b)` or `f32(count)` | Resolve the callee; then decide whether it is a function call or type conversion and check the arguments. |
 | Index | Brackets after a value: `items[i]` | Check that the base is indexable and each index has an allowed integer type. |
 | Field access | A dot and field name: `point.x` | Resolve the base type, find the field, and use the field's type. |
-| Array or repeat array | `[1, 2, 3]` or `[0; 16]` | Check element types agree and record the fixed shape. |
+| Array or repeat array | `[1, 2, 3]` or `[0; 2 + 2]` | Parse element and dimension expressions; later check element compatibility and fixed-shape dimension rules. |
 | Struct construction | A type name with fields: `Point { x: 1.0, y: 2.0 }` | Resolve the struct and check required, unknown, duplicate, and mistyped fields. |
 
 `primary` and `postfix` are useful parser categories rather than extra semantic
@@ -79,6 +154,13 @@ return value;
 
 Most simple Vortex statements end with `;`. Control-flow statements and blocks
 do not need a trailing semicolon.
+
+**Statements can:** change mutable storage, control execution, return from a
+function, declare a local variable, or evaluate an expression for its effects.
+
+**Statements cannot:** be used where a value is required. In particular,
+assignment and `if` are statements rather than value-producing expressions in
+v0.1.
 
 #### Statement subtypes: quick handling map
 
@@ -110,6 +192,13 @@ struct Point {
 
 A local `let` is called a variable declaration, although the grammar also
 treats it as a kind of statement because it appears inside a block.
+
+**Declarations can:** introduce functions, structs, parameters, fields, and
+local variables in their permitted scopes.
+
+**Declarations cannot:** automatically supply a runtime value. For example,
+`left: i32` declares a parameter name and type; the corresponding value arrives
+from an argument when the function is called.
 
 #### Declaration subtypes: quick handling map
 
@@ -143,13 +232,20 @@ Point
 | Subtype | Examples | What to do with it |
 | --- | --- | --- |
 | Primitive | `void`, `bool`, `char`, `i32`, `u32`, `usize`, `f32`, `f64`, `String` | Recognize it directly. Numeric primitives split into integers (`i32`, `u32`, `usize`) and floating point (`f32`, `f64`); the others have their own operation rules. |
-| Array | `[f32; 16]`, `[f32; 4, 4]` | Resolve the element type and record every fixed dimension. |
+| Array | `[f32; 16]`, `[f32; 2 + 2, 8 / 2]` | Resolve the element type, preserve each dimension expression, then require fixed compile-time integer extents during semantic checking. |
 | Reference | `&i32`, `&mut [f32; 16]` | Resolve the referred-to type and record whether the reference is mutable. |
 | User-defined | `Point` | Look up the name and require it to resolve to a declared type such as a struct. |
 
 Type annotations use these same four forms recursively. For example,
 `&mut [f32; 16]` is a mutable reference whose referred-to type is an array,
 whose element type is the primitive `f32`.
+
+**Types can:** describe function parameters and results, variable annotations,
+struct fields, referenced values, and array elements.
+
+**Types cannot:** serve as ordinary runtime values by themselves. A type name
+may use call syntax for a cast, such as `f32(count)`, but name and type checking
+must identify that conversion after parsing.
 
 ## Program structure
 
@@ -244,6 +340,25 @@ struct Point {
 A named value stored inside a struct. `x` and `y` are fields of `Point`.
 
 ## Every Vortex v0.1 statement
+
+### Statement validity at a glance
+
+| Form | Valid example | Closest invalid form | Why invalid |
+| --- | --- | --- | --- |
+| Variable declaration | `let value = 10;` | `let value;` | initializer required |
+| Typed variable | `let value: i32 = 10;` | `let value i32 = 10;` | missing `:` |
+| Assignment | `value += 1;` | `(value += 1)` | assignment is not an expression |
+| Return | `return value;` | `return value` | missing `;` |
+| Expression statement | `calculate();` | `calculate()` | missing `;` |
+| If | `if ready { run(); }` | `if ready run();` | block required |
+| While | `while ready { run(); }` | `while (ready) run();` | block required |
+| For | `for i in 0..10 { run(); }` | `for (i = 0; i < 10; i += 1) {}` | C-style form unsupported |
+| Break | `break;` | `break value;` | no break value in v0.1 |
+| Continue | `continue;` | `continue value;` | no continue value in v0.1 |
+
+An entry can be syntactically valid and still fail later. For example,
+`break;` matches the grammar anywhere a statement is allowed, but semantic
+analysis rejects it outside a loop.
 
 ### Variable declaration
 
@@ -363,6 +478,22 @@ A nested block used where a statement is allowed:
 ```
 
 ## Every Vortex v0.1 expression
+
+### Expression validity at a glance
+
+| Form | Valid example | Not allowed or checked later |
+| --- | --- | --- |
+| Literal | `42`, `3.14`, `true`, `'V'`, `"text"` | literal range and final numeric type are checked later |
+| Grouping | `(left + right)` | empty `()` is unsupported |
+| Unary | `-value`, `!ready`, `&mut item` | operand type is checked later |
+| Binary | `left + right`, `left < right` | compatible operand types are checked later |
+| Range | `0..10`, `0..=10` | chained ranges are not part of the v0.1 grammar |
+| Call/cast | `add(a, b)`, `f32(count)` | callee resolution and argument types are checked later |
+| Index | `values[i]`, `matrix[row, column]` | index type and bounds are checked later |
+| Field access | `point.x` | field existence is checked later |
+| Array | `[1, 2, 3]` | empty `[]` is unsupported |
+| Repeat array | `[0; 2 + 2]` | dimensions must pass fixed-size rules later |
+| Struct construction | `Point { x: 1.0 }` | unknown, missing, duplicate, or mistyped fields are checked later |
 
 ### Literal expression
 
@@ -559,9 +690,13 @@ Creates an array from element expressions:
 Creates an array shape by repeating a value:
 
 ```vortex
-[0.0; 16]
-[0.0; 4, 4]
+[0.0; 2 + 2]
+[0.0; 2 + 2, 8 / 2]
 ```
+
+The repeated value and every dimension are expressions. They have different
+roles: the value supplies array elements, while the dimensions describe the
+shape.
 
 ### Struct expression
 
@@ -578,6 +713,90 @@ Point {
 
 The smallest starting form of an expression: a literal, identifier, array,
 struct value, or parenthesized expression.
+
+## Array dimensions: expressions with fixed-size rules
+
+Array types and repeat-array values preserve dimensions as expression AST
+nodes:
+
+```vortex
+let values: [i32; 2 + 2] = [0; 2 + 2];
+let matrix: [f32; 2 * 2, 8 / 2] = [0.0; 2 * 2, 8 / 2];
+```
+
+The parser does not immediately reduce `2 + 2` to `4`. It builds the normal
+binary-expression tree so the source structure and location remain available:
+
+```text
+ArrayType or RepeatArrayExpr
+└── dimension: BinaryExpr(Add)
+    ├── Literal(2)
+    └── Literal(2)
+```
+
+### What you can write syntactically
+
+Because a dimension is an expression, the grammar can represent:
+
+```vortex
+[i32; 4]
+[i32; 2 + 2]
+[i32; (2 * 4)]
+[i32; rows, columns]
+[0; size_for_input()]
+```
+
+Parsing these forms does not promise that they form valid fixed-size array
+types. Parsing only establishes their structure.
+
+### What fixed-size v0.1 arrays require semantically
+
+Each dimension must evaluate to an integer extent that is:
+
+- known at compile time;
+- representable by the implementation's supported array-size representation.
+
+The grammar does not currently settle whether a zero-length extent is legal.
+The parser must preserve `0` as an expression; the semantic specification must
+make and enforce the zero-extent policy.
+
+| Dimension | Syntax | Fixed-size semantic result |
+| --- | --- | --- |
+| `4` | valid | valid |
+| `2 + 2` | valid | valid after constant evaluation |
+| `(8 / 2)` | valid | valid if integer evaluation produces `4` |
+| `3.5` | valid expression syntax | invalid dimension because it is not an integer |
+| `0` | valid expression syntax | depends on the language's zero-extent policy |
+| `runtime_size()` | valid expression syntax | invalid unless it has a defined compile-time value |
+
+This distinction explains why dimensions are stored as
+`std::vector<std::unique_ptr<Expr>>` instead of immediately as a vector of
+integers.
+
+### Array type versus repeat-array value
+
+```vortex
+[i32; 2 + 2] // type: element type is i32, dimension is 2 + 2
+[0; 2 + 2]   // value: repeated element is 0, dimension is 2 + 2
+```
+
+The surrounding parser context distinguishes them. A type parser expects an
+element type before `;`; an expression parser expects a repeated value.
+
+### Dimension expression versus index expression
+
+```vortex
+let values: [i32; 2 + 2] = [0; 4];
+let item = values[index + 1];
+```
+
+- `2 + 2` describes the array's fixed shape and must satisfy compile-time
+  dimension rules.
+- `index + 1` chooses an element and may be evaluated at runtime.
+
+Do not store these as the same AST role even though both are expressions. The
+array type or repeat-array node owns dimensions; an index-expression node owns
+indices.
 
 ## Operator terminology
 
@@ -637,6 +856,25 @@ A type built directly into the language:
 void bool char i32 u32 usize f32 f64 String
 ```
 
+### Literal value versus primitive type
+
+These answer different questions:
+
+| Concept | Question answered | Example from `let count: u32 = 42;` |
+| --- | --- | --- |
+| Literal value | What data was written? | magnitude `42` |
+| Literal kind | What source-literal category was written? | integer literal |
+| Primitive type | How is the value interpreted and validated? | `u32` |
+
+One integer-literal representation can initially store the nonnegative
+magnitude for `42` whether later checking selects `i32`, `u32`, or `usize`.
+For `-42`, the literal stores `42` and a unary-expression parent stores the
+negation operation.
+
+Do not add `void` to `LiteralValue`: `void` is a type but has no literal value.
+Do not store `i32` as the parameter's literal value in `left: i32`: it is the
+parameter's declared type, and the runtime value comes from a call argument.
+
 ### Integer type
 
 A whole-number type. Vortex v0.1 includes `i32`, `u32`, and `usize`.
@@ -677,8 +915,12 @@ A fixed-size collection whose shape is part of its type:
 
 ```vortex
 [f32; 16]
-[f32; 4, 4]
+[f32; 2 + 2, 8 / 2]
 ```
+
+Each dimension is parsed as an expression. Fixed-size semantic checking later
+requires a compile-time integer result that is valid as an array extent. See
+[Array dimensions: expressions with fixed-size rules](#array-dimensions-expressions-with-fixed-size-rules).
 
 ### Reference type
 
@@ -1072,6 +1314,92 @@ Internal state or helpers that only the type itself should control.
 
 A fixed set of named choices with scoped names, such as `TokenKind::KW_LET` or
 `BinaryOperation::Add`.
+
+### Constructor
+
+A special C++ function that initializes an object when it is created:
+
+```cpp
+PrimitiveType(SourceLocation location, PrimitiveTypeKind kind)
+    : Type(location), primitive_type_(kind) {}
+```
+
+Reading it from left to right:
+
+- `PrimitiveType(...)` lists the information required to create the node;
+- `Type(location)` initializes the base `Type` part;
+- `primitive_type_(kind)` stores the concrete primitive kind; and
+- `{}` is the constructor body, which is empty because initialization is
+  already complete.
+
+A concrete AST constructor should normally accept every field required to make
+the node valid. Base-category constructors such as `Expr(location)` may need
+only the shared source location.
+
+### Constructor initializer list
+
+The portion after `:` that initializes bases and members before the constructor
+body runs:
+
+```cpp
+: Expr(location), left_(std::move(left)), right_(std::move(right))
+```
+
+This is initialization, not assignment after construction.
+
+### `std::move`
+
+Marks an object as available for move construction or move assignment. AST
+constructors use it to transfer ownership of strings, vectors, and
+`unique_ptr` children into the new node:
+
+```cpp
+operand_(std::move(operand))
+```
+
+After ownership is moved from a `unique_ptr`, the old pointer no longer owns
+the child and should not be used as though it does.
+
+### `std::variant`
+
+A type-safe container that holds exactly one value from a fixed list of C++
+types. A general literal node can use it because integer, floating, string,
+character, and boolean values need different C++ storage:
+
+```cpp
+using LiteralValue = std::variant<
+    std::uint64_t,
+    double,
+    std::string,
+    char,
+    bool>;
+```
+
+The variant holds one alternative at a time. It does not mean every Vortex
+primitive type needs a separate alternative.
+
+### `std::vector`
+
+An ordered growable C++ collection. AST nodes use vectors for source constructs
+that may contain several children, such as function parameters, block
+statements, call arguments, array elements, and array dimension expressions.
+
+Use values for fixed child-record kinds that exist only inside their parent:
+
+```cpp
+std::vector<ParamDecl> parameters;
+```
+
+`ParamDecl` belongs directly to `FunctionDecl`, so a pointer is unnecessary
+unless parameters later need polymorphism or stable addresses. Use owning
+pointers when the vector contains different derived node types:
+
+```cpp
+std::vector<std::unique_ptr<Expr>> dimensions;
+```
+
+This means the collection owns zero or more polymorphic expression nodes in
+source order.
 
 ## One fully annotated example
 

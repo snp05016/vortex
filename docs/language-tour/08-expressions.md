@@ -1,5 +1,13 @@
 # Expressions
 
+[Previous: Kernels and parallel execution](07-kernels-and-parallel-execution.md) | [Tour index](README.md) | [Next: Statements](09-statements.md)
+
+## Learning goals
+
+After this chapter, you should be able to identify every v0.1 expression form,
+separate unary from binary operators, read precedence, and explain which stage
+checks an expression.
+
 An expression produces a value. A statement performs an action. Vortex programs
 use both of them together.
 
@@ -17,6 +25,23 @@ values[index]
 x > y
 ```
 
+## Expression quick reference
+
+| Form | Syntax example | Result |
+| --- | --- | --- |
+| Literal | `42`, `true`, `"text"` | The literal's value. |
+| Name | `width` | The value bound to a visible name. |
+| Unary | `-value`, `!ready`, `&mut item` | One operation applied to one operand. |
+| Binary | `left + right`, `a && b` | One operation applied to two operands. |
+| Call/cast | `square(4.0)`, `f32(count)` | A function result or converted value. |
+| Index/field | `values[index]`, `point.x` | One part of a compound value. |
+| Array/struct | `[1, 2]`, `Point { x: 1.0 }` | A newly constructed value. |
+| Range | `0..10`, `0..=10` | A bounded sequence used by iteration. |
+| Group | `(left + right)` | The enclosed expression with explicit precedence. |
+
+Assignment (`=`) is a statement operator, not a binary expression. A complete
+expression also does not end in `;`; the containing statement supplies it.
+
 ## Literal expressions
 
 A literal is a value written directly in the program:
@@ -30,6 +55,22 @@ true                // bool
 [1, 2, 3, 4]        // array
 ```
 
+The scalar literal forms are integer, floating-point, boolean, character, and
+string literals. An array is a constructed expression, even though programmers
+often call it an array literal informally.
+
+Malformed delimiters, unsupported escapes, empty character literals, and
+unsupported literal spellings are invalid:
+
+```vortex
+"unterminated
+'AB'
+0xFF // hexadecimal integer literals are not in v0.1
+```
+
+The lexer recognizes scalar literals. The parser wraps them in expression
+nodes, and type checking determines or verifies their Vortex types.
+
 ## Name expressions
 
 Writing the name of a variable reads its value:
@@ -40,6 +81,42 @@ let area = width * width;
 ```
 
 Here, both uses of `width` are expressions.
+
+Using an undeclared or out-of-scope name is invalid. The parser can still build
+a name expression; name resolution is the stage that reports the missing
+declaration.
+
+## Unary expressions
+
+A unary expression applies one prefix operator to one operand:
+
+| Operator | Allowed operand | Example |
+| --- | --- | --- |
+| `+` | Numeric | `+value` |
+| `-` | Signed integer or floating point | `-value` |
+| `!` | Boolean | `!finished` |
+| `~` | Integer | `~flags` |
+| `&` | Addressable value | `&value` |
+| `&mut` | Mutable addressable value | `&mut value` |
+
+The operand is itself an expression, so nesting is allowed:
+
+```vortex
+let negative = -(left + right);
+let not_ready = !is_ready;
+```
+
+Invalid examples:
+
+```vortex
+let bad = !42;       // ! requires bool
+let bits = ~3.14;    // ~ requires an integer
+let value = 10;
+let bad_ref = &mut value; // value is not mutable
+```
+
+The parser records the operator and operand. Type checking validates the
+operand. Reference analysis additionally checks addressability and mutability.
 
 ## Arithmetic expressions
 
@@ -63,6 +140,11 @@ let negative = -value;
 Arithmetic normally requires compatible number types. Vortex should not quietly
 convert between unrelated types when that could lose information.
 
+`%` requires integer operands. Division by zero and integer overflow follow the
+[runtime and numerical rules](06-runtime-and-numerical-rules.md). The type
+checker rejects mismatched or nonnumeric operands; it does not treat strings as
+numbers.
+
 ## Comparison expressions
 
 Comparisons produce a `bool`:
@@ -80,6 +162,10 @@ Comparisons produce a `bool`:
 let same = left == right;
 let in_bounds = index < length;
 ```
+
+Both operands must be compatible. Ordered comparison is for ordered values such
+as numbers; v0.1 does not define ordering for structs or strings. The type
+checker rejects incompatible comparisons.
 
 ## Logical expressions
 
@@ -100,10 +186,13 @@ let can_continue = ready || failed;
 it knows the answer:
 
 ```vortex
-let valid = index < values.len() && values[index] > 0.0;
+let valid = index < 4 && values[index] > 0.0;
 ```
 
 If the index is outside the array, the second part is not evaluated.
+
+Both operands must be `bool`. `1 && 2` is invalid because Vortex has no implicit
+integer-to-boolean conversion. Code generation preserves short-circuit order.
 
 ## Bitwise expressions
 
@@ -125,6 +214,10 @@ let next_bit = value << 1;
 ```
 
 Bitwise operators are different from the logical operators `&&`, `||`, and `!`.
+
+Their operands must be compatible integers. Floating-point, boolean, string,
+and struct operands are invalid. The parser uses precedence to distinguish
+prefix reference `&value` from infix bitwise `left & right`.
 
 ## Grouped expressions
 
@@ -151,6 +244,11 @@ a value that can be stored:
 print("starting");
 ```
 
+The number and types of arguments must match the function parameters. Calling
+an undeclared name, passing the wrong number of arguments, or storing a `void`
+result is invalid. The parser builds the call; name resolution finds the
+callee; type checking validates arguments and the result.
+
 ## Array expressions
 
 An array literal creates an array:
@@ -158,6 +256,31 @@ An array literal creates an array:
 ```vortex
 let values = [1.0, 2.0, 3.0, 4.0];
 ```
+
+A repeat-array expression accepts one value expression followed by one or more
+dimension expressions:
+
+```vortex
+let row = [0.0; 2 + 2];
+let matrix = [0.0; 2 * 2, 8 / 2];
+```
+
+Each dimension is parsed as a full expression. It must evaluate during
+compilation to an integer that fits `usize`; runtime-dependent and noninteger
+dimensions are invalid:
+
+```vortex
+fn make(size: usize) {
+    let values = [0.0; size];
+    // invalid: size is not known during compilation
+}
+
+let bad = [0.0; 2.5]; // invalid: f32 is not an array dimension type
+```
+
+An explicit element list must contain at least one element, and all elements
+must have a compatible type. Empty `[]` is not supported because it provides no
+element type for local inference.
 
 An indexing expression reads one element:
 
@@ -171,6 +294,10 @@ An index must have an integer type. Vortex checks that the index is inside the
 array along every dimension. It does this during compilation when the answer is
 already known and during execution otherwise. When the compiler can prove an
 index is safe, it may remove the unnecessary runtime check in optimized code.
+
+The number of indices must match the array rank. Each index must be an integer.
+The compiler performs known bounds checks during compilation and retains
+runtime checks for indices whose values are not known yet.
 
 ## Struct expressions and field access
 
@@ -186,6 +313,10 @@ let point = Point {
 let horizontal = point.x;
 ```
 
+A struct expression must provide every declared field exactly once with a
+compatible value. Unknown, duplicate, or missing fields are invalid. Field
+access requires a field that exists on the value's resolved struct type.
+
 ## Range expressions
 
 Ranges are mainly used by loops:
@@ -198,10 +329,14 @@ Ranges are mainly used by loops:
 For example:
 
 ```vortex
-for index in 0..values.len() {
+for index in 0..4 {
     print(values[index]);
 }
 ```
+
+V0.1 ranges have both endpoints; open-ended ranges such as `..10`, `0..`, and
+`..` are not supported. Range endpoints must have compatible integer types when
+the range is used for iteration.
 
 ## Cast expressions
 
@@ -244,6 +379,10 @@ Converting text into numbers is a different operation because the text may not
 contain a valid number. A future version should use an operation such as
 `i32::parse(text)` instead of treating text parsing as an ordinary cast.
 
+Only primitive type names can act as the v0.1 cast target. A normal function
+call and a cast share parser syntax; name and type checking determine which one
+the name denotes.
+
 ## Operator precedence
 
 Precedence decides which operation happens first when parentheses are not used.
@@ -278,5 +417,41 @@ be considered later:
 - anonymous functions and closures;
 - pattern matching;
 - overloaded operators for user-created types;
-- compile-time expressions;
+- general compile-time expressions outside the array-dimension positions that
+  specifically require compile-time evaluation;
 - tensor expressions that operate on complete tensors at once.
+
+## Compiler handling summary
+
+1. The lexer recognizes literal, identifier, delimiter, and operator tokens.
+2. The parser applies precedence and builds expression AST nodes.
+3. Name resolution binds names, calls, fields, and named types.
+4. Type checking validates operands and assigns every expression a result type.
+5. Constant evaluation reduces required compile-time expressions, including
+   array dimensions.
+6. Code generation preserves evaluation order, short circuiting, and required
+   runtime checks.
+
+## Practice and self-check
+
+Classify each line by its outermost expression form and decide whether it is
+valid:
+
+```vortex
+-(left + right)
+values[index + 1]
+[0.0; 2 + 2, rows]
+ready && count
+Point { x: 1.0, y: 2.0 }
+```
+
+Answers:
+
+1. Valid unary expression if `left` and `right` have compatible signed numeric
+   types.
+2. Valid index expression if `index + 1` is an integer and the access is in
+   bounds.
+3. A repeat-array expression, but invalid when `rows` is runtime-dependent.
+4. Invalid unless `count` is `bool`.
+5. Valid struct expression when `Point` declares exactly those compatible
+   fields.

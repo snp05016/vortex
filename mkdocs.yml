@@ -1,0 +1,86 @@
+site_name: Vortex Language Specification
+site_description: The normative Vortex v0.1 language specification and compiler implementation guide.
+site_author: Saumya Patel
+site_url: https://snp05016.github.io/vortex_language/
+repo_name: snp05016/vortex_language
+repo_url: https://github.com/snp05016/vortex_language
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+strict: true
+
+theme:
+  name: readthedocs
+  locale: en
+  highlightjs: true
+  hljs_languages:
+    - cpp
+    - ebnf
+  include_homepage_in_sidebar: true
+  navigation_depth: 4
+  collapse_navigation: false
+  titles_only: false
+  sticky_navigation: true
+
+nav:
+  - Vortex: index.md
+  - Language Specification:
+      - Specification status: specification/index.md
+      - 1. Conformance and terminology: specification/conformance.md
+      - 2. Lexical structure: specification/lexical-structure.md
+      - 3. Programs and declarations: specification/declarations.md
+      - 4. Types and values: specification/types-and-values.md
+      - 5. Expressions: specification/expressions.md
+      - 6. Statements and control flow: specification/statements.md
+      - 7. Arrays and shapes: specification/arrays.md
+      - 8. Structs: specification/structs.md
+      - 9. References and mutability: specification/references.md
+      - 10. Diagnostics: specification/diagnostics.md
+      - 11. Formal grammar: specification/grammar.md
+      - 12. Glossary: specification/glossary.md
+  - Language Guide:
+      - Start the tour: language-tour/README.md
+      - Syntax philosophy: language-tour/01-syntax-philosophy.md
+      - Basic source rules: language-tour/02-basic-source-rules.md
+      - Hello world and main: language-tour/03-hello-world.md
+      - Variables and types: language-tour/04-variables-and-types.md
+      - Expressions: language-tour/08-expressions.md
+      - Statements: language-tour/09-statements.md
+      - Declarations: language-tour/10-declarations.md
+      - Runtime and numerical rules: language-tour/06-runtime-and-numerical-rules.md
+      - Planned types: language-tour/05-types-planned-for-later.md
+      - Planned kernels and parallelism: language-tour/07-kernels-and-parallel-execution.md
+  - Compiler Implementation:
+      - Architecture: compiler/architecture.md
+      - Parser design: compiler/parser-design.md
+      - AST learning guide: compiler/ast-guide.md
+      - Implementation roadmap: roadmap.md
+  - Reference:
+      - Language and compiler cheat sheet: language-and-compiler-cheatsheet.md
+      - Language philosophy: philosophy.md
+      - Documentation map: README.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - fenced_code
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 4
+
+plugins:
+  - search:
+      lang: en
+      separator: '[\s\-\.::]+'
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/theme.js
+
+copyright: Vortex is an evolving language specification. Specified behavior is not necessarily implemented behavior.

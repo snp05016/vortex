@@ -1,5 +1,45 @@
 # Vortex v0.1 Roadmap
 
+This roadmap is organized like an implementation assignment. Each milestone has
+an objective, required work, and an observable completion condition. Do not mark
+a milestone complete merely because its main code path exists.
+
+## Contents
+
+- [How to use this roadmap](#how-to-use-this-roadmap)
+- [Goal](#goal)
+- [Milestones 0-3: compiler front end](#milestone-0-project-foundation)
+- [Milestones 4-5: names and types](#milestone-4-names-and-scopes)
+- [Milestones 6-10: executable programs](#milestone-6-basic-cpu-code-generation)
+- [Milestone 11: release gate](#milestone-11-v01-release-gate)
+- [Definition of done](#definition-of-done)
+- [After v0.1](#after-v01)
+
+## How to use this roadmap
+
+For every milestone:
+
+1. Read the matching grammar and language-tour sections.
+2. Write at least one valid example and one invalid example before implementation.
+3. Implement the smallest complete vertical slice.
+4. Add positive, negative, and source-location tests.
+5. Run all earlier milestone tests to detect regressions.
+6. Record known limitations rather than silently accepting partial behavior.
+
+### Evidence required before calling a milestone complete
+
+- The project builds from a clean configuration.
+- All automated tests pass.
+- Every documented valid example for the milestone succeeds.
+- Every documented invalid example fails for the documented reason.
+- Diagnostics point at the relevant source span.
+- The AST or generated output is stable enough to inspect.
+
+### Scope rule
+
+Milestones are cumulative. Work from a later milestone may be prototyped, but it
+must not weaken or bypass an earlier milestone's correctness rules.
+
 ## Goal
 
 Vortex v0.1 should compile a small Vortex source file into a correct CPU
@@ -79,6 +119,12 @@ declaration.
 - Infer local-variable types from their starting values.
 - Check operators, assignments, function arguments, and return values.
 - Check array dimensions and indexes.
+- Parse array dimensions as expressions, evaluate them during compilation, and
+  require integer results representable by the supported array-size model.
+- Reject runtime-dependent, negative, non-integer, and overflowing array
+  dimensions with dimension-specific diagnostics.
+- Decide and document the zero-length-array policy before marking this
+  milestone complete; parsing must not decide that semantic rule.
 - Reject changes to immutable values.
 - Enforce the basic shared-reference and mutable-reference rules.
 - Verify that non-`void` functions return a value on every path.
@@ -87,6 +133,19 @@ declaration.
 
 This milestone is complete when invalid programs are rejected before code
 generation with clear explanations.
+
+Required dimension examples:
+
+```vortex
+let matrix: [f32; 2 + 2, 8] = [0.0; 2 + 2, 8]; // valid: constant expressions
+```
+
+```vortex
+fn invalid(rows: usize) {
+    let matrix: [f32; rows, 8] = [0.0; rows, 8];
+    // invalid in v0.1: rows is only known at runtime
+}
+```
 
 ## Milestone 6: Basic CPU code generation
 
@@ -122,6 +181,8 @@ work in compiled programs.
 - Support basic UTF-8 string literals for printing and diagnostics.
 - Support fixed-size one-dimensional and multidimensional arrays.
 - Support array literals and repeat expressions such as `[0.0; 16]`.
+- Support expression dimensions in array types and repeat-array expressions,
+  including multidimensional forms such as `[0.0; 2 + 2, 8]`.
 - Support struct creation and field access.
 - Support shared and mutable references in function calls.
 - Define the memory layout for arrays, structs, and references.

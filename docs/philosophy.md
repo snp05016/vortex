@@ -1,5 +1,41 @@
 # Vortex Language Philosophy
 
+Use this document when deciding whether a feature belongs in Vortex. For exact
+syntax, use the [formal grammar](specification/grammar.md). For examples and
+teaching material, use the [language tour](language-tour/README.md).
+
+## Contents
+
+- [Purpose](#purpose)
+- [Target workloads](#target-workloads)
+- [Design principles](#design-principles)
+- [Performance philosophy](#performance-philosophy)
+- [Safety philosophy](#safety-philosophy)
+- [Hardware philosophy](#hardware-philosophy)
+- [Programmer and compiler responsibilities](#programmer-and-compiler-responsibilities)
+- [Non-goals](#non-goals)
+- [Initial scope](#initial-scope)
+- [Guiding test](#guiding-test)
+- [Feature decision worksheet](#feature-decision-worksheet)
+
+## At a glance
+
+### Vortex v0.1 should allow
+
+- statically typed scalar values, structs, fixed-size arrays, and references;
+- explicit mutation and structured control flow;
+- array dimension expressions whose values can be proven at compile time;
+- clear numerical kernels that expose useful type and shape information;
+- safe CPU execution with documented runtime checks.
+
+### Vortex v0.1 should not allow
+
+- runtime-sized array types whose layout is unknown during compilation;
+- implicit unsafe memory operations;
+- optimizations that silently change documented program behavior;
+- general-purpose features with no clear numerical-computing use;
+- undocumented hardware assumptions or unverified performance claims.
+
 ## Purpose
 
 Vortex is a statically typed, compiled programming language for writing
@@ -241,3 +277,26 @@ When considering a new feature, ask:
 
 If the answer is no, the feature probably does not belong in the initial Vortex
 language.
+
+## Feature Decision Worksheet
+
+Before adding a feature, write down answers to all of these questions:
+
+1. **Problem:** Which real Vortex program becomes clearer, safer, or faster?
+2. **Example:** What is the smallest valid source example?
+3. **Boundary:** What similar syntax remains invalid?
+4. **Compiler knowledge:** What new fact does the compiler learn?
+5. **Safety:** Can the feature create memory, numerical, or concurrency hazards?
+6. **Targets:** Does it have consistent CPU and future GPU meaning?
+7. **Diagnostics:** What should the compiler say when the feature is misused?
+8. **Testing:** Which positive, negative, and boundary tests prove it works?
+
+Example decision for expression-based array dimensions:
+
+| Question | Decision |
+| --- | --- |
+| Useful program | `[f32; tile_size * 2]` makes derived fixed shapes readable. |
+| Allowed | Integer expressions evaluable during compilation. |
+| Not allowed in v0.1 | Runtime-dependent dimensions such as a function parameter. |
+| Compiler responsibility | Parse an expression, evaluate it as a constant, then require a positive `usize`-compatible value. |
+| Failure diagnostic | Explain which dimension is non-constant, non-integer, negative, too large, or violates the separately documented zero-extent policy. |

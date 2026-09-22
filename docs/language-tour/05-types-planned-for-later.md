@@ -1,52 +1,118 @@
-# Types planned for later
+# Types Planned for Later
 
-The first version of Vortex should stay small. The following types are useful,
-but they can be added after the basic compiler works.
+[Previous: Variables and types](04-variables-and-types.md) | [Tour index](README.md) | [Next: Runtime and numerical rules](06-runtime-and-numerical-rules.md)
+
+## Learning goals
+
+After this chapter, you should be able to distinguish accepted v0.1 types from
+future design sketches. Every code sample in this chapter is illustrative and
+is **not valid v0.1 syntax** unless the text explicitly says otherwise.
+
+## Current boundary
+
+The first version of Vortex stays small. It supports primitive types,
+fixed-size arrays, references, and named struct types. Slices, vectors, tensors,
+matrix aliases, and additional numerical types are planned for later.
+
+### What you can do in v0.1
+
+```vortex
+let values: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
+let matrix: [f32; 2, 2] = [0.0; 2, 2];
+```
+
+### What you cannot do in v0.1
+
+```vortex
+let values: Vector<f32> = Vector::new();
+let view: &[f32] = &values;
+let matrix: Tensor<f32, [128, 256]>;
+```
+
+These fail because the corresponding type and expression grammars do not yet
+exist. They are not library calls that can be enabled with an import.
 
 ## Slices
 
-A slice is a view into part of an array. Its length is known while the program
-is running rather than when it is compiled.
+A future slice would be a view into part of an array. Its length would be known
+while the program runs rather than being part of its compile-time type.
 
 ```text
-&[T]      shared slice
-&mut [T]  mutable slice
+&[T]      proposed shared slice
+&mut [T]  proposed mutable slice
 ```
 
-The slice views existing memory. It does not own or copy the values.
+The slice would view existing memory without owning or copying the values.
+However, v0.1 array types always include dimensions, so `&[f32]` is currently
+invalid. Use a reference to a fixed-size array such as `&[f32; 4]` instead.
 
 ## Vectors
 
-A `Vector<T>` owns a continuous area of memory whose length can grow or shrink
-while the program is running:
+A future `Vector<T>` would own contiguous memory whose length can grow or
+shrink while the program runs:
 
 ```vortex
+// proposed syntax, not valid v0.1
 let values: Vector<f32> = Vector::new();
 values.push(1.0);
 values.push(2.0);
 ```
 
-Unlike a fixed-size array, a vector does not need to have a length known during
-compilation. Use a vector when the amount of data is only known while the
-program runs.
+Unlike a fixed-size array, a vector would not require a compile-time length.
+V0.1 has no generics, namespace operator `::`, methods, or vector allocation,
+so every part of this example remains future work.
 
 ## Tensors and matrices
 
-Vortex will need a multidimensional tensor type for its main numerical
-workloads. A possible design is:
+Vortex will eventually need a multidimensional tensor type for its main
+numerical workloads. One possible design is:
 
 ```vortex
+// design sketch, not valid v0.1
 let vector: Tensor<f32, [128]>;
 let matrix: Tensor<f32, [128, 256]>;
 let batch: Tensor<f32, [16, 128, 256]>;
 ```
 
-`Matrix` may be a convenient name for a two-dimensional tensor:
+`Matrix` may become a convenient name for a two-dimensional tensor:
 
 ```text
-Matrix<T, M, N> means Tensor<T, [M, N]>
+Matrix<T, M, N> might mean Tensor<T, [M, N]>
 ```
 
-The exact tensor syntax has not been decided yet. Fixed-size arrays are enough
-for the first matrix-multiplication program, so the higher-level tensor design
-can wait until after v0.1.
+The exact tensor syntax has not been decided. Fixed-size multidimensional
+arrays are the supported v0.1 replacement:
+
+```vortex
+let matrix: [f32; 4, 4] = [0.0; 4, 4];
+```
+
+## Additional primitive types
+
+Types such as `i8`, `i16`, `i64`, `u8`, `u16`, `u64`, `f16`, and `bf16` may be
+added later. They are not aliases for current types, and the compiler should
+reject them as unknown type names in v0.1 unless a struct with that exact name
+has been declared.
+
+## Compiler handling
+
+The parser may parse an unknown identifier in a type position as a named type.
+Name resolution then rejects it when no matching struct exists. Syntax such as
+`Vector<f32>` fails earlier because generic type arguments are absent from the
+v0.1 grammar. Clear diagnostics should say whether the failure is grammatical
+or an unresolved type name.
+
+## Practice and self-check
+
+Classify each type as **v0.1** or **planned**:
+
+```text
+[f32; 4, 4]
+&mut [f32; 8]
+Vector<f32>
+Tensor<f32, [8, 8]>
+Point
+```
+
+The first, second, and fifth forms are v0.1, assuming `Point` was declared as a
+struct. `Vector` and `Tensor` are planned.

@@ -1,5 +1,13 @@
 # Statements
 
+[Previous: Expressions](08-expressions.md) | [Tour index](README.md) | [Next: Declarations](10-declarations.md)
+
+## Learning goals
+
+After this chapter, you should be able to recognize every v0.1 statement,
+identify where semicolons are required, and explain the contextual checks for
+assignment, loops, and return.
+
 A statement tells Vortex to do something. Unlike an expression, a statement is
 usually used for its effect: creating a variable, changing a value, choosing a
 path, repeating work, or leaving a function.
@@ -7,6 +15,23 @@ path, repeating work, or leaving a function.
 Statements in v0.1 end with a semicolon when they are written on one line.
 Blocks such as `if` and `for` use braces and do not need a semicolon after the
 closing brace.
+
+## Statement quick reference
+
+| Statement | Example | Semicolon after it? |
+| --- | --- | --- |
+| Variable declaration | `let count = 0;` | Yes |
+| Assignment | `count += 1;` | Yes |
+| Expression statement | `print(count);` | Yes |
+| Return | `return count;` | Yes |
+| Break/continue | `break;` | Yes |
+| Block | `{ ... }` | No |
+| `if`/`else` | `if ready { ... }` | No |
+| `while` | `while ready { ... }` | No |
+| `for` | `for i in 0..4 { ... }` | No |
+
+V0.1 does not include declaration-only locals, `switch`, `match`, `do while`,
+exceptions, `defer`, or parallel-loop statements.
 
 ## Variable declarations
 
@@ -18,6 +43,10 @@ let mut total: f32 = 0.0;
 ```
 
 The first variable cannot change. The second can change because it uses `mut`.
+
+Every variable declaration needs an initializer. The optional type annotation
+must agree with that expression. Parsing checks the syntax; type checking and
+local-scope creation validate the declaration.
 
 ## Assignment statements
 
@@ -32,6 +61,20 @@ values[0] = 10.0;
 ```
 
 Vortex does not allow assignment to a variable created without `mut`.
+
+The target may be a mutable variable, mutable field, or mutable array element.
+A literal, calculation, call result, or immutable location is not assignable:
+
+```vortex
+10 = value;            // invalid: literal is not a location
+(left + right) = 0;    // invalid: calculation is not a location
+let fixed = 1;
+fixed = 2;             // invalid: fixed is immutable
+```
+
+The parser recognizes the restricted assignment-target grammar. Semantic
+analysis checks that the resolved storage is mutable and the value type is
+compatible.
 
 ## Compound assignment statements
 
@@ -52,6 +95,10 @@ let mut total: f32 = 0.0;
 total += 2.5;
 ```
 
+The underlying operator must be valid for the target type. For example,
+`name %= 2;` is invalid when `name` is a `String`. The target is evaluated once;
+compound assignment is not permission to duplicate side effects.
+
 ## Expression statements
 
 An expression can be used as a statement when you only care about its effect.
@@ -61,6 +108,10 @@ Function calls that print information are the most common example:
 print("starting calculation");
 save_results(values);
 ```
+
+Any grammatical expression can appear before `;`, but using a pure value and
+discarding it has no useful effect. A call returning `void` cannot be used as a
+stored value, but it is valid as an expression statement.
 
 ## Blocks and scope
 
@@ -75,6 +126,9 @@ block:
 
 // `temporary` cannot be used here.
 ```
+
+Name resolution opens a scope at `{` and closes it at `}`. A block may contain
+zero or more statements. V0.1 does not use a block itself as a value.
 
 ## If and else statements
 
@@ -104,6 +158,17 @@ if temperature < 0 {
 In v0.1, `if` is a statement. It chooses which code runs but does not directly
 produce a value. Value-producing `if` expressions can be added later.
 
+Every condition must have type `bool`; Vortex does not treat numbers or strings
+as truth values. Each branch is a block, while `else if` is an `else` followed
+by another `if` statement.
+
+```vortex
+if 1 {
+    print("invalid");
+}
+// invalid: condition is i32, not bool
+```
+
 ## While loops
 
 A `while` loop repeats as long as its condition stays `true`:
@@ -116,6 +181,9 @@ while index < 4 {
     index += 1;
 }
 ```
+
+The condition must be `bool`. The body may execute zero times. A C-style loop
+such as `for (let i = 0; i < 4; i += 1)` is not part of Vortex.
 
 ## For loops
 
@@ -140,6 +208,10 @@ for index in 0..=4 {
 For loops are especially important in Vortex because matrix and tensor code is
 mostly made from clear, nested loops.
 
+The loop variable is introduced by the loop and is visible only inside its
+body. The expression after `in` must be iterable; v0.1 uses integer ranges.
+`for index = 0..4` is invalid because the required keyword is `in`.
+
 ## Break and continue
 
 Use `break` to leave a loop immediately:
@@ -163,6 +235,10 @@ for value in 0..10 {
     print(value);
 }
 ```
+
+`break` and `continue` are valid only inside the nearest enclosing loop. They
+are invalid in an ordinary block or directly inside a function with no loop.
+This is a semantic context check rather than a parsing decision.
 
 ## Return statements
 
@@ -190,6 +266,16 @@ fn print_positive(value: i32) -> void {
 }
 ```
 
+A non-`void` function must return a compatible value on every reachable path.
+A `void` function may use `return;` but cannot return a value. A non-`void`
+function cannot use an empty `return;`.
+
+```vortex
+fn bad() -> i32 {
+    return; // invalid: i32 result is missing
+}
+```
+
 ## Statements that can wait
 
 The first version does not need these yet:
@@ -202,3 +288,31 @@ The first version does not need these yet:
 - `unsafe` blocks;
 - parallel-loop statements;
 - GPU-kernel launch statements.
+
+## Compiler handling summary
+
+The parser identifies statement boundaries and builds statement AST nodes.
+Name resolution manages block and loop-variable scopes. Type checking validates
+conditions, assignments, expressions, and returned values. Control-flow
+analysis checks loop-only statements and verifies required return paths. Code
+generation emits the selected branches, loop edges, and early exits.
+
+## Practice and self-check
+
+Identify the invalid lines and explain each failure:
+
+```vortex
+let value;
+let fixed = 1;
+fixed += 1;
+break;
+if 42 { print("answer"); }
+```
+
+Answers:
+
+1. A local declaration requires an initializer.
+2. `let fixed = 1;` is valid.
+3. `fixed` is immutable.
+4. `break` is outside a loop.
+5. An `if` condition must be `bool`.

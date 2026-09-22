@@ -23,7 +23,7 @@ enum class TokenKind { // Using an enum because the token kinds are fixed.
   KW_I32,
   KW_U32,   // 32 bit unsigned integer
   KW_USIZE, // represents the size of memory pointer
-	KW_F32,
+  KW_F32,
   KW_F64,
   KW_STRING,
   // Operators

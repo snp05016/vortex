@@ -1,11 +1,33 @@
 # Declarations
 
+[Previous: Statements](09-statements.md) | [Tour index](README.md)
+
+## Learning goals
+
+After this chapter, you should be able to distinguish top-level declarations
+from child declarations and local declaration statements, describe what each
+one stores, and explain how the compiler enters names into scopes.
+
 A declaration introduces a name or definition that the rest of a program can
 use. Vortex has declarations for functions, structs, local variables,
 parameters, and struct fields.
 
 Declarations are checked by the compiler. The compiler records each name, its
 scope, and its type before it generates code.
+
+## Declaration quick reference
+
+| Form | Where it appears | Independent top-level declaration? |
+| --- | --- | --- |
+| Function declaration | Program | Yes |
+| Struct declaration | Program | Yes |
+| Parameter declaration | Inside a function signature | No; child of its function |
+| Field declaration | Inside a struct body | No; child of its struct |
+| Variable declaration | Inside a block | No; it is a statement |
+
+V0.1 has no standalone type-alias declaration. A struct declaration introduces
+a named user-defined type. Modules, generics, traits, classes, global variables,
+and compile-time constant declarations are outside v0.1.
 
 ## Function declarations
 
@@ -51,6 +73,29 @@ fn main() {
 A function declaration does not run the function. The function runs only when
 code calls it, or when the runtime starts the `main` function.
 
+### Allowed and not allowed
+
+- A function may have zero or more comma-separated parameters.
+- Every parameter needs an explicit type.
+- The return type may be omitted only to mean `void`.
+- A function body is always a block.
+- Nested function declarations, default parameter values, variadic parameters,
+  overload declarations, and function prototypes without bodies are not part
+  of v0.1.
+
+```vortex
+fn add(left, right: i32) -> i32 { // invalid: left has no type
+    return left + right;
+}
+
+fn declared_only(value: i32) -> i32; // invalid: body is missing
+```
+
+The parser builds a function declaration with its name, ordered parameter
+children, optional written return type, and body. Name resolution enters the
+function in top-level scope and its parameters in function scope. Type and
+control-flow checking validate calls and returns.
+
 ## Struct declarations
 
 A struct declaration creates a user-defined type with named fields:
@@ -81,6 +126,29 @@ with the wrong type.
 
 Structs are simple value types in v0.1. Inheritance and class declarations are
 not part of the language.
+
+### Allowed and not allowed
+
+- A struct contains zero or more comma-separated field declarations.
+- Each field has a unique name and an explicit type.
+- A trailing comma is allowed.
+- Field initializers, methods, visibility modifiers, inheritance, and generic
+  fields are not part of v0.1 struct declarations.
+
+```vortex
+struct Invalid {
+    value: i32,
+    value: f32, // invalid: duplicate field name
+}
+
+struct AlsoInvalid {
+    count = 0, // invalid: a field declaration uses name: type
+}
+```
+
+The parser stores ordered field children in the struct declaration. Name
+resolution introduces the struct type, and type checking resolves every field
+type and later checks struct construction.
 
 ## Variable declarations
 
@@ -133,6 +201,10 @@ limit = 20; // compile-time error
 A local variable declaration is also a statement because it appears inside a
 block and affects program execution by creating a value.
 
+Local declarations cannot appear directly at the top level. V0.1 also does not
+support uninitialized locals, global variables, destructuring declarations, or
+changing a variable's type after its declaration.
+
 ## Parameter declarations
 
 A parameter declaration names one input to a function and gives it a type:
@@ -155,6 +227,19 @@ let result = scale(2.0, 3.0);
 
 The compiler checks the number and types of arguments against the parameter
 list. Parameters are local to their function and cannot be used outside it.
+
+A parameter declaration is an owned child record of its `FunctionDecl`; it is
+not an independent top-level declaration and does not need to behave like one.
+Conceptually, a function contains an ordered `std::vector<ParamDecl>`. Each
+parameter record stores its own source location, name, and type so diagnostics
+can point to the exact parameter.
+
+Default values and `mut` parameter syntax are not part of v0.1:
+
+```vortex
+fn invalid(value: i32 = 10) { }
+// invalid: default parameters are unsupported
+```
 
 Parameters can use references when a function must read or change an existing
 value without copying it:
@@ -193,6 +278,12 @@ let area = size.width * size.height;
 Field access uses the type of the value on the left side of the dot. The
 compiler rejects a field name that does not exist for that type.
 
+Like a parameter, a field declaration exists only as a child record of its
+owning declaration. A `StructDecl` contains ordered field records; a field is
+not placed in local or top-level value scope. A field declaration stores a
+source location, field name, and type, but no runtime value. A struct expression
+supplies the value later.
+
 ## Names and scopes
 
 A declaration makes a name visible in a scope. Vortex uses these scopes:
@@ -230,6 +321,10 @@ let ItemCount = 8;
 These are different names. The compiler rejects duplicate declarations in the
 same scope. Shadowing rules for nested scopes are part of the name-resolution
 checks and should remain explicit in compiler diagnostics.
+
+Until those shadowing rules are finalized, do not rely on redeclaring an outer
+name inside an inner block. Duplicate names in the same scope are always
+invalid.
 
 ## Declaration grammar
 
@@ -278,3 +373,37 @@ The first version keeps declarations small. These features are outside v0.1:
 
 These features can be added later when their effect on name resolution, types,
 and numerical code is defined clearly.
+
+## Compiler handling summary
+
+1. The parser builds top-level function and struct declarations.
+2. Parameter and field records are constructed only inside their owners.
+3. Name resolution creates top-level, function, block, and struct-field scopes.
+4. Type checking resolves every written type and checks initializers, calls,
+   struct construction, assignments, and returns.
+5. Code generation lays out structs, creates function symbols, and allocates
+   storage for parameters and local variables.
+
+## Practice and self-check
+
+For each item, name its owner and scope:
+
+```vortex
+struct Point {
+    x: f32,
+}
+
+fn move_x(point: Point, amount: f32) -> Point {
+    let result = Point { x: point.x + amount };
+    return result;
+}
+```
+
+Answers:
+
+- `Point` is a top-level struct declaration and introduces a named type.
+- `x` is a field child owned by `Point`; it is selected through a `Point` value.
+- `point` and `amount` are parameter children owned by `move_x` and visible in
+  its function body.
+- `result` is a local variable-declaration statement visible from its
+  declaration to the end of the function block.
