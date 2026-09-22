@@ -48,13 +48,18 @@ body {
 
 .wy-nav-content {
   background: var(--vortex-surface);
+  box-sizing: border-box;
   max-width: 1040px;
+  min-width: 0;
   min-height: 100vh;
+  overflow: hidden;
   padding: 2.75rem 3.5rem 4rem;
 }
 
 .rst-content {
   color: var(--vortex-text);
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .rst-content h1,
@@ -170,6 +175,22 @@ body {
   color: #ffffff;
 }
 
+.wy-menu-vertical li.current,
+.wy-menu-vertical li.current > ul {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.wy-menu-vertical li.current ul a {
+  border-right: 0;
+  color: var(--vortex-sidebar-muted);
+}
+
+.wy-menu-vertical li.current ul a:hover,
+.wy-menu-vertical li.current ul li.current > a {
+  background: rgba(121, 168, 255, 0.12);
+  color: #ffffff;
+}
+
 .theme-toggle {
   align-items: center;
   background: transparent;
@@ -223,6 +244,31 @@ button:focus-visible {
   padding: 0;
 }
 
+.rst-content pre .hljs-keyword,
+.rst-content pre .hljs-type,
+.rst-content pre .hljs-selector-tag {
+  color: #ff8796;
+}
+
+.rst-content pre .hljs-title,
+.rst-content pre .hljs-built_in {
+  color: #c8adff;
+}
+
+.rst-content pre .hljs-variable,
+.rst-content pre .hljs-number,
+.rst-content pre .hljs-literal {
+  color: #80baff;
+}
+
+.rst-content pre .hljs-string {
+  color: #8bd9a7;
+}
+
+.rst-content pre .hljs-comment {
+  color: #aebbd0;
+}
+
 .rst-content table.docutils,
 .rst-content table {
   border: 1px solid var(--vortex-border);
@@ -245,6 +291,11 @@ button:focus-visible {
 .rst-content table th {
   border-color: var(--vortex-border);
   padding: 0.72rem 0.82rem;
+}
+
+.rst-content table.docutils th,
+.rst-content table th {
+  color: var(--vortex-text);
 }
 
 .rst-content blockquote,
@@ -297,6 +348,10 @@ button:focus-visible {
   padding: 1rem 0 2.6rem;
 }
 
+.home-hero > * {
+  min-width: 0;
+}
+
 .home-hero h1 {
   border: 0;
   font-size: clamp(2.6rem, 6vw, 4.6rem);
@@ -318,7 +373,10 @@ button:focus-visible {
   border-radius: var(--vortex-radius);
   color: var(--vortex-code-text);
   margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
   padding: 1.1rem;
+  width: 100%;
 }
 
 .chapter-grid {
@@ -401,11 +459,21 @@ button:focus-visible {
   .home-hero,
   .chapter-grid,
   .spec-meta {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .home-hero h1 {
     font-size: 2.7rem;
+  }
+
+  .wy-breadcrumbs-aside {
+    display: block;
+    float: none;
+    margin-top: 0.5rem;
+  }
+
+  .rst-content .wy-breadcrumbs {
+    overflow: hidden;
   }
 
   .rst-content table.docutils,

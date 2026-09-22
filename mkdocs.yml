@@ -8,6 +8,8 @@ edit_uri: edit/main/docs/
 docs_dir: docs
 site_dir: site
 strict: true
+exclude_docs: |
+  /README.md
 
 theme:
   name: readthedocs
@@ -58,7 +60,6 @@ nav:
   - Reference:
       - Language and compiler cheat sheet: language-and-compiler-cheatsheet.md
       - Language philosophy: philosophy.md
-      - Documentation map: README.md
 
 markdown_extensions:
   - admonition

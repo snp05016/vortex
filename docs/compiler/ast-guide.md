@@ -3,7 +3,8 @@
 This guide explains the C++ ideas needed to build the Vortex abstract syntax
 tree (AST). It is a learning path, not an implementation claim or a replacement
 for the [grammar](../specification/grammar.md) and
-[parser design](parser-design.md). The current [`ast.h`](../../src/frontend/ast.h)
+[parser design](parser-design.md). The current
+[`ast.h`](https://github.com/snp05016/vortex_language/blob/main/src/frontend/ast.h)
 is work in progress; examples here show the intended relationships, not an API
 that already compiles unchanged in this repository.
 

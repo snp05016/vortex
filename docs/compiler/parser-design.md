@@ -6,7 +6,8 @@ must reject immediately, and what must be left for semantic analysis.
 
 The grammar is authoritative for source syntax. See
 [Vortex v0.1 Grammar](../specification/grammar.md). The AST declarations are
-authoritative for the C++ node shapes. See [`ast.h`](../../src/frontend/ast.h).
+authoritative for the C++ node shapes. See
+[`ast.h`](https://github.com/snp05016/vortex_language/blob/main/src/frontend/ast.h).
 
 > **Implementation status:** `parser.cpp` is currently a scaffold. The designs
 > and function shapes below are implementation requirements, not claims that
