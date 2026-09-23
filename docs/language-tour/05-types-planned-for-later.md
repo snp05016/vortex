@@ -1,6 +1,4 @@
-# Types Planned for Later
-
-[Previous: Variables and types](04-variables-and-types.md) | [Tour index](README.md) | [Next: Runtime and numerical rules](06-runtime-and-numerical-rules.md)
+# Types planned for later
 
 ## Learning goals
 
@@ -59,7 +57,7 @@ values.push(2.0);
 ```
 
 Unlike a fixed-size array, a vector would not require a compile-time length.
-V0.1 has no generics, namespace operator `::`, methods, or vector allocation,
+Vortex v0.1 has no generics, namespace operator `::`, methods, or vector allocation,
 so every part of this example remains future work.
 
 ## Tensors and matrices
@@ -96,11 +94,16 @@ has been declared.
 
 ## Compiler handling
 
-The parser may parse an unknown identifier in a type position as a named type.
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
+The parser (the [compiler stage](../compiler/guide/index.md) that checks how tokens fit together and builds the program's structure) may parse an unknown identifier in a type position as a named type.
 Name resolution then rejects it when no matching struct exists. Syntax such as
 `Vector<f32>` fails earlier because generic type arguments are absent from the
 v0.1 grammar. Clear diagnostics should say whether the failure is grammatical
 or an unresolved type name.
+
+</details>
 
 ## Practice and self-check
 

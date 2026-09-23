@@ -114,7 +114,7 @@ for_statement ::=
 ```
 
 The identifier introduces one loop-local variable. The expression after `in`
-must be iterable. V0.1 iteration is specified for integer ranges.
+must be iterable. Vortex v0.1 iteration is specified for integer ranges.
 
 ```vortex
 for index in 0..4 {
@@ -159,5 +159,5 @@ outliving the storage to which it refers.
 
 ## 6.12 Excluded statements
 
-V0.1 has no `switch`, `match`, `do while`, exception handling, `defer`, unsafe
+Vortex v0.1 has no `switch`, `match`, `do while`, exception handling, `defer`, unsafe
 block, parallel loop, kernel launch, label, or `goto` statement.

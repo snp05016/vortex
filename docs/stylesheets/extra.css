@@ -26,6 +26,13 @@
   --vortex-sidebar-text: #d8d8d4;
   --vortex-sidebar-muted: #a3a39d;
   --vortex-focus: #ffffff;
+  --vortex-code-bg: #f6f6f3;
+  --vortex-code-keyword: #6b2f9e;
+  --vortex-code-type: #0b5c73;
+  --vortex-code-string: #2f6b1f;
+  --vortex-code-number: #9a4a06;
+  --vortex-code-comment: #6e6e68;
+  --vortex-accent: #0b5c73;
 }
 
 [data-theme="dark"] {
@@ -40,13 +47,22 @@
   --vortex-sidebar-text: #eeeeea;
   --vortex-sidebar-muted: #a7a7a1;
   --vortex-focus: #ffffff;
+  --vortex-code-bg: #1d1d1c;
+  --vortex-code-keyword: #d7a8ff;
+  --vortex-code-type: #7fd4e8;
+  --vortex-code-string: #a8d990;
+  --vortex-code-number: #f2b37a;
+  --vortex-code-comment: #9a9a93;
+  --vortex-accent: #7fd4e8;
 }
 
 html {
+  background: var(--vortex-canvas);
   scroll-behavior: auto;
 }
 
 body,
+.wy-body-for-nav,
 .wy-nav-content-wrap {
   background: var(--vortex-canvas);
   color: var(--vortex-black);
@@ -121,7 +137,19 @@ body {
 .rst-content .headerlink {
   color: var(--vortex-muted);
   font-size: 0.72em;
+  opacity: 0;
   padding-left: 0.35rem;
+  text-decoration: none;
+}
+
+.rst-content h1:hover .headerlink,
+.rst-content h2:hover .headerlink,
+.rst-content h3:hover .headerlink,
+.rst-content h4:hover .headerlink,
+.rst-content h5:hover .headerlink,
+.rst-content h6:hover .headerlink,
+.rst-content .headerlink:focus {
+  opacity: 1;
 }
 
 .rst-content a {
@@ -156,7 +184,16 @@ body {
 .wy-side-nav-search {
   background: var(--vortex-sidebar);
   border-bottom: 1px solid #343432;
-  padding: 1.5rem 1.15rem 1.2rem;
+  padding: 1.1rem 1.15rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* The sticky search header covers the top of the sidebar, so the theme's
+   scrollIntoView() on the current page must stop below it. */
+.wy-menu-vertical a {
+  scroll-margin-top: 11rem;
 }
 
 .wy-side-nav-search > a,
@@ -298,14 +335,46 @@ samp {
 }
 
 .rst-content pre {
-  background: var(--vortex-white);
-  border: 1px solid var(--vortex-black);
-  border-left-width: 4px;
+  background: var(--vortex-code-bg);
+  border: 1px solid var(--vortex-border);
+  border-left: 4px solid var(--vortex-black);
   border-radius: 0;
   color: var(--vortex-black);
   font-size: 0.88rem;
   line-height: 1.65;
-  padding: 1.2rem 1.35rem;
+  padding: 1.4rem 1.6rem;
+  position: relative;
+}
+
+.rst-content pre code.hljs {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.copy-button {
+  background: var(--vortex-surface);
+  border: 1px solid var(--vortex-border);
+  color: var(--vortex-muted);
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 0.55;
+  padding: 0.35rem 0.55rem;
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+}
+
+.rst-content pre:hover .copy-button,
+.copy-button:focus-visible {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  border-color: var(--vortex-black);
+  color: var(--vortex-black);
 }
 
 .rst-content pre code {
@@ -315,24 +384,35 @@ samp {
   padding: 0;
 }
 
+.rst-content pre [class*="hljs-"] {
+  color: inherit;
+}
+
 .rst-content pre .hljs-keyword,
-.rst-content pre .hljs-type,
-.rst-content pre .hljs-selector-tag,
-.rst-content pre .hljs-title,
-.rst-content pre .hljs-built_in {
-  color: var(--vortex-black);
+.rst-content pre .hljs-selector-tag {
+  color: var(--vortex-code-keyword);
   font-weight: 600;
 }
 
-.rst-content pre .hljs-variable,
-.rst-content pre .hljs-number,
-.rst-content pre .hljs-literal,
-.rst-content pre .hljs-string {
-  color: var(--vortex-black);
+.rst-content pre .hljs-type,
+.rst-content pre .hljs-built_in,
+.rst-content pre .hljs-title {
+  color: var(--vortex-code-type);
 }
 
-.rst-content pre .hljs-comment {
-  color: var(--vortex-muted);
+.rst-content pre .hljs-string,
+.rst-content pre .hljs-symbol {
+  color: var(--vortex-code-string);
+}
+
+.rst-content pre .hljs-number,
+.rst-content pre .hljs-literal {
+  color: var(--vortex-code-number);
+}
+
+.rst-content pre .hljs-comment,
+.rst-content pre .hljs-meta {
+  color: var(--vortex-code-comment);
   font-style: italic;
 }
 
@@ -508,12 +588,103 @@ samp {
   color: var(--vortex-muted);
 }
 
+.rst-footer-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 3rem 0 1.5rem;
+}
+
+.rst-footer-buttons::before,
+.rst-footer-buttons::after {
+  display: none;
+}
+
 .rst-footer-buttons a.btn {
-  background: var(--vortex-subtle);
-  border: 1px solid var(--vortex-black);
+  background: var(--vortex-subtle) !important;
+  border: 1px solid var(--vortex-border);
   border-radius: 0;
   box-shadow: none;
+  color: var(--vortex-muted) !important;
+  text-decoration: none;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  float: none;
+  font-size: 0.8rem;
+  gap: 0.25rem;
+  line-height: 1.3;
+  max-width: 48%;
+  padding: 1rem 1.2rem;
+  text-align: left;
+  white-space: normal;
+}
+
+.rst-footer-buttons a.btn:hover {
+  background: var(--vortex-surface) !important;
+  border-color: var(--vortex-black);
+}
+
+.rst-footer-buttons a.btn::after {
   color: var(--vortex-black);
+  content: attr(title);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.rst-footer-buttons a.float-right {
+  margin-left: auto;
+  text-align: right;
+}
+
+.rst-footer-buttons .icon {
+  display: none;
+}
+
+/* Prev/next live at the bottom of each page; keep only the repo link in the
+   fixed bottom-left bar so the two no longer collide. */
+.rst-versions {
+  background: var(--vortex-sidebar);
+  border-top: 1px solid #343432;
+}
+
+.rst-versions .rst-current-version {
+  background: var(--vortex-sidebar);
+}
+
+.rst-versions .rst-current-version > span:not(:first-child) {
+  display: none;
+}
+
+.rst-content details {
+  background: var(--vortex-subtle);
+  border-left: 4px solid var(--vortex-border);
+  margin: 1rem 0 1.5rem;
+  padding: 0.75rem 1.15rem;
+}
+
+.rst-content details > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rst-content details[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+.start-tour {
+  background: var(--vortex-black);
+  color: var(--vortex-white) !important;
+  display: inline-block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0.5rem 0 2rem;
+  padding: 0.85rem 1.4rem;
+  text-decoration: none !important;
+}
+
+.start-tour:hover {
+  opacity: 0.88;
 }
 
 [data-theme="dark"] .wy-nav-top {
@@ -527,7 +698,21 @@ samp {
   background: var(--vortex-subtle);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
 @media screen and (max-width: 768px) {
+  .rst-footer-buttons a.btn {
+    max-width: none;
+  }
+
   .wy-nav-content {
     padding: 2rem 1.15rem 3rem;
   }
@@ -567,5 +752,268 @@ samp {
   .rst-content table {
     display: block;
     overflow-x: auto;
+  }
+}
+
+/* ---- Compiler guide figures ------------------------------------------ */
+
+.vx-figure {
+  margin: 2rem 0 2.25rem;
+}
+
+.vx-figure svg {
+  display: block;
+  height: auto;
+  max-width: 760px;
+  width: 100%;
+}
+
+.vx-figure figcaption {
+  color: var(--vortex-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-top: 0.7rem;
+  max-width: 74ch;
+}
+
+.vx-figure svg text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.vx-figure .vx-box {
+  fill: var(--vortex-subtle);
+  stroke: var(--vortex-border);
+  stroke-width: 1.5;
+}
+
+.vx-figure .vx-box-strong {
+  fill: var(--vortex-surface);
+  stroke: var(--vortex-black);
+  stroke-width: 2;
+}
+
+.vx-figure .vx-box-accent {
+  fill: var(--vortex-subtle);
+  stroke: var(--vortex-accent);
+  stroke-width: 2.5;
+}
+
+.vx-figure .vx-box-bad {
+  fill: var(--vortex-subtle);
+  stroke: var(--vortex-code-number);
+  stroke-dasharray: 5 4;
+  stroke-width: 2;
+}
+
+.vx-figure .vx-text {
+  fill: var(--vortex-black);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.vx-figure .vx-text-muted {
+  fill: var(--vortex-muted);
+  font-size: 12px;
+}
+
+.vx-figure .vx-text-accent {
+  fill: var(--vortex-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vx-figure .vx-mono {
+  fill: var(--vortex-black);
+  font-family: "Fira Code", ui-monospace, monospace !important;
+  font-size: 13px;
+  font-variant-ligatures: none;
+}
+
+.vx-figure .vx-line {
+  fill: none;
+  stroke: var(--vortex-muted);
+  stroke-width: 1.5;
+}
+
+.vx-figure .vx-arrowhead {
+  fill: var(--vortex-muted);
+}
+
+.vx-figure .vx-dot {
+  fill: var(--vortex-accent);
+}
+
+/* A dashed line that appears to flow in the direction it is drawn. */
+.vx-figure .vx-flow {
+  animation: vx-dash 1.4s linear infinite;
+  fill: none;
+  stroke: var(--vortex-accent);
+  stroke-dasharray: 6 6;
+  stroke-width: 2;
+}
+
+@keyframes vx-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* Elements that light up one after another. Set --vx-i (0, 1, 2, ...) and
+   --vx-n (total count) inline. The resting state is fully visible, so the
+   figure still reads correctly when motion is reduced. */
+.vx-figure .vx-seq {
+  animation: vx-seq calc(var(--vx-n, 5) * 1.2s) ease-in-out infinite;
+  animation-delay: calc(var(--vx-i, 0) * 1.2s);
+}
+
+@keyframes vx-seq {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  8%,
+  22% {
+    opacity: 1;
+  }
+}
+
+/* A marker that travels a set horizontal distance, e.g. a token moving
+   along a pipeline. Set --vx-distance inline, e.g. style="--vx-distance: 600px". */
+.vx-figure .vx-travel {
+  animation: vx-travel 6s ease-in-out infinite;
+}
+
+@keyframes vx-travel {
+  0%,
+  8% {
+    transform: translateX(0);
+  }
+  92%,
+  100% {
+    transform: translateX(var(--vx-distance, 600px));
+  }
+}
+
+/* A gentle emphasis pulse for the one element a figure is about. */
+.vx-figure .vx-pulse {
+  animation: vx-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes vx-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Step-through panels (progressively enhanced by theme.js). */
+.vx-stepper {
+  border: 1px solid var(--vortex-border);
+  margin: 2rem 0;
+  padding: 1.2rem 1.4rem;
+}
+
+.vx-stepper .vx-step > h4:first-child,
+.vx-stepper .vx-step > p:first-child {
+  margin-top: 0;
+}
+
+.vx-stepper.is-enhanced .vx-step {
+  display: none;
+}
+
+.vx-stepper.is-enhanced .vx-step.is-current {
+  display: block;
+}
+
+.vx-stepper-controls {
+  align-items: center;
+  border-top: 1px solid var(--vortex-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+}
+
+.vx-stepper-controls button {
+  background: var(--vortex-subtle);
+  border: 1px solid var(--vortex-border);
+  color: var(--vortex-black);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.vx-stepper-controls button:hover:not(:disabled) {
+  border-color: var(--vortex-black);
+}
+
+.vx-stepper-controls button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.vx-stepper-status {
+  color: var(--vortex-muted);
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
+/* Two-column "have / do not need yet" lists. */
+.vx-split {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.5rem 0;
+}
+
+.vx-split > div {
+  border-top: 3px solid var(--vortex-black);
+  padding-top: 0.6rem;
+}
+
+.vx-split > div.vx-not-yet {
+  border-top-color: var(--vortex-border);
+}
+
+.vx-split h4 {
+  margin-top: 0.4rem !important;
+}
+
+@media screen and (max-width: 768px) {
+  .vx-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.vx-figure .vx-cell-on {
+  fill: var(--vortex-accent);
+  stroke: var(--vortex-accent);
+  stroke-width: 1.5;
+}
+
+.rst-content p.lead {
+  color: var(--vortex-black);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  margin: 0 0 1rem;
+  max-width: 40ch;
+}
+
+/* Keep figure text legible on phones: the figure scrolls sideways inside
+   itself instead of shrinking to unreadable size. */
+@media screen and (max-width: 768px) {
+  .vx-figure {
+    overflow-x: auto;
+  }
+
+  .vx-figure svg {
+    min-width: 620px;
   }
 }

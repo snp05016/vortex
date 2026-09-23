@@ -25,42 +25,58 @@ theme:
   sticky_navigation: true
 
 nav:
-  - Vortex: index.md
-  - Language Specification:
-      - Specification status: specification/index.md
-      - 1. Conformance and terminology: specification/conformance.md
-      - 2. Lexical structure: specification/lexical-structure.md
-      - 3. Programs and declarations: specification/declarations.md
-      - 4. Types and values: specification/types-and-values.md
-      - 5. Expressions: specification/expressions.md
-      - 6. Statements and control flow: specification/statements.md
-      - 7. Arrays and shapes: specification/arrays.md
-      - 8. Structs: specification/structs.md
-      - 9. References and mutability: specification/references.md
-      - 10. Diagnostics: specification/diagnostics.md
-      - 11. Formal grammar: specification/grammar.md
-      - 12. Glossary: specification/glossary.md
-  - Language Guide:
+  - Home: index.md
+  - Learn Vortex:
       - Start the tour: language-tour/README.md
-      - Syntax philosophy: language-tour/01-syntax-philosophy.md
-      - Basic source rules: language-tour/02-basic-source-rules.md
-      - Hello world and main: language-tour/03-hello-world.md
-      - Variables and types: language-tour/04-variables-and-types.md
-      - Expressions: language-tour/08-expressions.md
-      - Statements: language-tour/09-statements.md
-      - Declarations: language-tour/10-declarations.md
-      - Runtime and numerical rules: language-tour/06-runtime-and-numerical-rules.md
-      - Planned types: language-tour/05-types-planned-for-later.md
-      - Planned kernels and parallelism: language-tour/07-kernels-and-parallel-execution.md
-  - Compiler Implementation:
+      - 1. Syntax philosophy: language-tour/01-syntax-philosophy.md
+      - 2. Basic source rules: language-tour/02-basic-source-rules.md
+      - 3. Hello world and main: language-tour/03-hello-world.md
+      - 4. Variables and types: language-tour/04-variables-and-types.md
+      - 5. Expressions: language-tour/08-expressions.md
+      - 6. Statements: language-tour/09-statements.md
+      - 7. Declarations: language-tour/10-declarations.md
+      - 8. Runtime and numerical rules: language-tour/06-runtime-and-numerical-rules.md
+      - 9. Planned types: language-tour/05-types-planned-for-later.md
+      - 10. Planned kernels and parallelism: language-tour/07-kernels-and-parallel-execution.md
+  - Reference:
+      - Language specification:
+          - Specification status: specification/index.md
+          - 1. Conformance and terminology: specification/conformance.md
+          - 2. Lexical structure: specification/lexical-structure.md
+          - 3. Programs and declarations: specification/declarations.md
+          - 4. Types and values: specification/types-and-values.md
+          - 5. Expressions: specification/expressions.md
+          - 6. Statements and control flow: specification/statements.md
+          - 7. Arrays and shapes: specification/arrays.md
+          - 8. Structs: specification/structs.md
+          - 9. References and mutability: specification/references.md
+          - 10. Diagnostics: specification/diagnostics.md
+          - 11. Formal grammar: specification/grammar.md
+          - 12. Glossary: specification/glossary.md
+      - Cheat sheet: language-and-compiler-cheatsheet.md
+      - Language philosophy: philosophy.md
+      - Authorship and methodology: authorship.md
+  - Build the compiler:
+      - Overview: compiler/guide/index.md
+      - 0. The workbench: compiler/guide/stage-0-workbench.md
+      - 1. Source text and error messages: compiler/guide/stage-1-source-and-diagnostics.md
+      - 2. The lexer: compiler/guide/stage-2-lexer.md
+      - 3. The parser and the syntax tree: compiler/guide/stage-3-parser-and-tree.md
+      - 4. Names and scopes: compiler/guide/stage-4-names-and-scopes.md
+      - 5. Types and language rules: compiler/guide/stage-5-types-and-rules.md
+      - 6. The first machine code: compiler/guide/stage-6-first-machine-code.md
+      - 7. Functions and control flow: compiler/guide/stage-7-functions-and-control-flow.md
+      - 8. Data in memory: compiler/guide/stage-8-data-in-memory.md
+      - 9. Runtime safety: compiler/guide/stage-9-runtime-safety.md
+      - 10. Matrix multiplication: compiler/guide/stage-10-matrix-multiplication.md
+      - 11. Release: compiler/guide/stage-11-release.md
+      - Word list: compiler/guide/words.md
+      - Reading list: compiler/guide/reading-list.md
+  - Compiler internals:
       - Architecture: compiler/architecture.md
       - Parser design: compiler/parser-design.md
       - AST learning guide: compiler/ast-guide.md
       - Implementation roadmap: roadmap.md
-  - Reference:
-      - Language and compiler cheat sheet: language-and-compiler-cheatsheet.md
-      - Language philosophy: philosophy.md
-      - Authorship and methodology: authorship.md
 
 markdown_extensions:
   - admonition

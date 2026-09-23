@@ -1,4 +1,4 @@
-# Vortex v0.1 Grammar Reference
+# Vortex v0.1 grammar reference
 
 This is the formal source-language reference for Vortex v0.1. It combines the
 EBNF grammar with implementation notes, valid and invalid examples, semantic

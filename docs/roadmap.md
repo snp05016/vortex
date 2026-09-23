@@ -1,8 +1,12 @@
-# Vortex v0.1 Roadmap
+# Vortex v0.1 roadmap
 
 This roadmap is organized like an implementation assignment. Each milestone has
 an objective, required work, and an observable completion condition. Do not mark
 a milestone complete merely because its main code path exists.
+
+Each milestone has a matching chapter in the
+[compiler guide](compiler/guide/index.md), which explains in plain language
+what the milestone needs, what it can leave out, and where to read more.
 
 ## Contents
 

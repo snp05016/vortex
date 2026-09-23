@@ -1,6 +1,4 @@
-# Runtime and Numerical Rules
-
-[Previous: Types planned for later](05-types-planned-for-later.md) | [Tour index](README.md) | [Next: Kernels and parallel execution](07-kernels-and-parallel-execution.md)
+# Runtime and numerical rules
 
 ## Learning goals
 
@@ -65,17 +63,22 @@ Faster relaxed numerical modes may be added later when their behavior can be
 made explicit.
 
 Floating-point results are not exact decimal arithmetic. Programs should not
-assume that every decimal calculation can be represented perfectly. V0.1 also
+assume that every decimal calculation can be represented perfectly. Vortex v0.1 also
 does not provide a fast-math flag, implicit integer-to-float conversion, or a
 special decimal-money type.
 
 ## Compiler handling
 
-Type checking first verifies that an operation is defined for its operand
-types. Constant evaluation reports provably invalid operations during
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
+Type checking (the [compiler stage](../compiler/guide/index.md) that checks every value's type)
+first verifies that an operation is defined for its operand types. Constant evaluation reports provably invalid operations during
 compilation. For values known only at runtime, code generation emits overflow,
 division, cast, and bounds checks as required. An optimizer may remove a check
 only after proving the operation safe.
+
+</details>
 
 ## Practice and self-check
 

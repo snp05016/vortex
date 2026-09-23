@@ -5,7 +5,7 @@ forms the value-producing part of the Vortex abstract syntax tree.
 
 ## 5.1 Expression forms
 
-V0.1 includes:
+Vortex v0.1 includes:
 
 - scalar literals and identifiers;
 - array and struct construction;
@@ -119,7 +119,7 @@ zero are checked according to the [diagnostic rules](diagnostics.md).
 `==` and `!=` compare compatible values for equality where their type defines
 equality. `<`, `<=`, `>`, and `>=` require compatible ordered operands.
 
-All comparison and equality expressions produce `bool`. V0.1 does not define
+All comparison and equality expressions produce `bool`. Vortex v0.1 does not define
 ordered comparison for strings or structs.
 
 ## 5.7 Logical expressions
@@ -175,7 +175,7 @@ the selected field exists on the resolved object type.
 
 ## 5.10 Evaluation order
 
-V0.1 requires left-to-right evaluation for ordered child lists such as call
+Vortex v0.1 requires left-to-right evaluation for ordered child lists such as call
 arguments, array elements, and struct field initializer values. Short-circuit
 operators apply their more specific rules.
 
@@ -184,7 +184,7 @@ specified observable behavior and required diagnostics.
 
 ## 5.11 Invalid forms
 
-V0.1 has no assignment expressions, ternary expressions, value-producing
+Vortex v0.1 has no assignment expressions, ternary expressions, value-producing
 `if`, `match`, lambdas, optional chaining, null coalescing, increment,
 decrement, open-ended ranges, or chained ranges.
 

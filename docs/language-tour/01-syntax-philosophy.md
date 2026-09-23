@@ -1,6 +1,4 @@
-# Syntax Philosophy
-
-[Tour index](README.md) | Next: [Basic source rules](02-basic-source-rules.md)
+# Syntax philosophy
 
 ## Learning goals
 
@@ -67,10 +65,15 @@ variable inferred as `i32` cannot later contain a `String`.
 
 ## Compiler handling
 
-The parser recognizes declarations, blocks, and statements. Name resolution
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
+The parser (the [compiler stage](../compiler/guide/index.md) that checks how tokens fit together and builds the program's structure) recognizes declarations, blocks, and statements. Name resolution
 connects `square` and `value` to their declarations. Type checking assigns or
 verifies every value's type and rejects incompatible operations before code
 generation.
+
+</details>
 
 ## Self-check
 

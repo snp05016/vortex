@@ -1,4 +1,4 @@
-# Vortex Language and Compiler Cheat Sheet
+# Vortex language and compiler cheat sheet
 
 Use this page when you remember the idea but forget the terminology.
 

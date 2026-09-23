@@ -1,7 +1,5 @@
 # Statements
 
-[Previous: Expressions](08-expressions.md) | [Tour index](README.md) | [Next: Declarations](10-declarations.md)
-
 ## Learning goals
 
 After this chapter, you should be able to recognize every v0.1 statement,
@@ -30,7 +28,7 @@ closing brace.
 | `while` | `while ready { ... }` | No |
 | `for` | `for i in 0..4 { ... }` | No |
 
-V0.1 does not include declaration-only locals, `switch`, `match`, `do while`,
+Vortex v0.1 does not include declaration-only locals, `switch`, `match`, `do while`,
 exceptions, `defer`, or parallel-loop statements.
 
 ## Variable declarations
@@ -45,7 +43,8 @@ let mut total: f32 = 0.0;
 The first variable cannot change. The second can change because it uses `mut`.
 
 Every variable declaration needs an initializer. The optional type annotation
-must agree with that expression. Parsing checks the syntax; type checking and
+must agree with that expression. [Parsing](../compiler/guide/index.md) (the compiler stage that reads the structure of the code)
+checks the syntax; type checking and
 local-scope creation validate the declaration.
 
 ## Assignment statements
@@ -72,8 +71,9 @@ let fixed = 1;
 fixed = 2;             // invalid: fixed is immutable
 ```
 
-The parser recognizes the restricted assignment-target grammar. Semantic
-analysis checks that the resolved storage is mutable and the value type is
+The parser recognizes the restricted assignment-target grammar. [Semantic
+analysis](../specification/glossary.md) (the checks on meaning that run after parsing) checks that
+the resolved storage is mutable and the value type is
 compatible.
 
 ## Compound assignment statements
@@ -128,7 +128,7 @@ block:
 ```
 
 Name resolution opens a scope at `{` and closes it at `}`. A block may contain
-zero or more statements. V0.1 does not use a block itself as a value.
+zero or more statements. Vortex v0.1 does not use a block itself as a value.
 
 ## If and else statements
 
@@ -266,9 +266,10 @@ fn print_positive(value: i32) -> void {
 }
 ```
 
-A non-`void` function must return a compatible value on every reachable path.
-A `void` function may use `return;` but cannot return a value. A non-`void`
-function cannot use an empty `return;`.
+- A non-`void` function must return a compatible value on every reachable
+  path.
+- A `void` function may use `return;` but cannot return a value.
+- A non-`void` function cannot use an empty `return;`.
 
 ```vortex
 fn bad() -> i32 {
@@ -291,11 +292,17 @@ The first version does not need these yet:
 
 ## Compiler handling summary
 
-The parser identifies statement boundaries and builds statement AST nodes.
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
+The parser identifies statement boundaries and builds statement [AST](../specification/glossary.md) (abstract syntax tree) nodes.
 Name resolution manages block and loop-variable scopes. Type checking validates
-conditions, assignments, expressions, and returned values. Control-flow
-analysis checks loop-only statements and verifies required return paths. Code
+conditions, assignments, expressions, and returned values.
+
+Control-flow analysis checks loop-only statements and verifies required return paths. Code
 generation emits the selected branches, loop edges, and early exits.
+
+</details>
 
 ## Practice and self-check
 

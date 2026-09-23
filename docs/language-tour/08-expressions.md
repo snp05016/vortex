@@ -1,7 +1,5 @@
 # Expressions
 
-[Previous: Kernels and parallel execution](07-kernels-and-parallel-execution.md) | [Tour index](README.md) | [Next: Statements](09-statements.md)
-
 ## Learning goals
 
 After this chapter, you should be able to identify every v0.1 expression form,
@@ -68,8 +66,9 @@ unsupported literal spellings are invalid:
 0xFF // hexadecimal integer literals are not in v0.1
 ```
 
-The lexer recognizes scalar literals. The parser wraps them in expression
-nodes, and type checking determines or verifies their Vortex types.
+The lexer (the [compiler stage](../compiler/guide/index.md) that splits source text into tokens) recognizes scalar literals.
+The parser (the stage that checks how tokens fit together) wraps them in
+expression nodes, and type checking determines or verifies their Vortex types.
 
 ## Name expressions
 
@@ -244,9 +243,14 @@ a value that can be stored:
 print("starting");
 ```
 
-The number and types of arguments must match the function parameters. Calling
-an undeclared name, passing the wrong number of arguments, or storing a `void`
-result is invalid. The parser builds the call; name resolution finds the
+The number and types of arguments must match the function parameters. These
+are invalid:
+
+- calling an undeclared name;
+- passing the wrong number of arguments;
+- storing a `void` result.
+
+The parser builds the call; name resolution finds the
 callee; type checking validates arguments and the result.
 
 ## Array expressions
@@ -295,7 +299,8 @@ array along every dimension. It does this during compilation when the answer is
 already known and during execution otherwise. When the compiler can prove an
 index is safe, it may remove the unnecessary runtime check in optimized code.
 
-The number of indices must match the array rank. Each index must be an integer.
+The number of indices must match the array [rank](../specification/glossary.md) (its number of
+dimensions). Each index must be an integer.
 The compiler performs known bounds checks during compilation and retains
 runtime checks for indices whose values are not known yet.
 
@@ -334,7 +339,7 @@ for index in 0..4 {
 }
 ```
 
-V0.1 ranges have both endpoints; open-ended ranges such as `..10`, `0..`, and
+Vortex v0.1 ranges have both endpoints; open-ended ranges such as `..10`, `0..`, and
 `..` are not supported. Range endpoints must have compatible integer types when
 the range is used for iteration.
 
@@ -423,14 +428,20 @@ be considered later:
 
 ## Compiler handling summary
 
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
 1. The lexer recognizes literal, identifier, delimiter, and operator tokens.
-2. The parser applies precedence and builds expression AST nodes.
+2. The parser applies precedence and builds expression [AST](../specification/glossary.md)
+   (abstract syntax tree) nodes.
 3. Name resolution binds names, calls, fields, and named types.
 4. Type checking validates operands and assigns every expression a result type.
 5. Constant evaluation reduces required compile-time expressions, including
    array dimensions.
 6. Code generation preserves evaluation order, short circuiting, and required
    runtime checks.
+
+</details>
 
 ## Practice and self-check
 

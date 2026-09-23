@@ -1,4 +1,4 @@
-# Vortex v0.1 Parser Design and Implementation Assignment
+# Vortex v0.1 parser design and implementation assignment
 
 This document is the working reference for implementing the Vortex parser. It
 explains what the parser must recognize, what AST node it should build, what it

@@ -1,7 +1,5 @@
 # Declarations
 
-[Previous: Statements](09-statements.md) | [Tour index](README.md)
-
 ## Learning goals
 
 After this chapter, you should be able to distinguish top-level declarations
@@ -13,7 +11,7 @@ use. Vortex has declarations for functions, structs, local variables,
 parameters, and struct fields.
 
 Declarations are checked by the compiler. The compiler records each name, its
-scope, and its type before it generates code.
+[scope](../specification/glossary.md) (the region of code where the name is visible), and its type before it generates code.
 
 ## Declaration quick reference
 
@@ -25,7 +23,7 @@ scope, and its type before it generates code.
 | Field declaration | Inside a struct body | No; child of its struct |
 | Variable declaration | Inside a block | No; it is a statement |
 
-V0.1 has no standalone type-alias declaration. A struct declaration introduces
+Vortex v0.1 has no standalone type-alias declaration. A struct declaration introduces
 a named user-defined type. Modules, generics, traits, classes, global variables,
 and compile-time constant declarations are outside v0.1.
 
@@ -91,7 +89,7 @@ fn add(left, right: i32) -> i32 { // invalid: left has no type
 fn declared_only(value: i32) -> i32; // invalid: body is missing
 ```
 
-The parser builds a function declaration with its name, ordered parameter
+The parser (the [compiler stage](../compiler/guide/index.md) that checks how tokens fit together and builds the program's structure) builds a function declaration with its name, ordered parameter
 children, optional written return type, and body. Name resolution enters the
 function in top-level scope and its parameters in function scope. Type and
 control-flow checking validate calls and returns.
@@ -201,7 +199,7 @@ limit = 20; // compile-time error
 A local variable declaration is also a statement because it appears inside a
 block and affects program execution by creating a value.
 
-Local declarations cannot appear directly at the top level. V0.1 also does not
+Local declarations cannot appear directly at the top level. Vortex v0.1 also does not
 support uninitialized locals, global variables, destructuring declarations, or
 changing a variable's type after its declaration.
 
@@ -358,7 +356,7 @@ variable_declaration ::=
     "=", expression, ";" ;
 ```
 
-See the complete grammar in [Vortex v0.1 Grammar](../specification/grammar.md).
+See the complete grammar in [Vortex v0.1 grammar](../specification/grammar.md).
 
 ## Declarations planned for later
 
@@ -376,6 +374,9 @@ and numerical code is defined clearly.
 
 ## Compiler handling summary
 
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
 1. The parser builds top-level function and struct declarations.
 2. Parameter and field records are constructed only inside their owners.
 3. Name resolution creates top-level, function, block, and struct-field scopes.
@@ -383,6 +384,8 @@ and numerical code is defined clearly.
    struct construction, assignments, and returns.
 5. Code generation lays out structs, creates function symbols, and allocates
    storage for parameters and local variables.
+
+</details>
 
 ## Practice and self-check
 

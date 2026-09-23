@@ -1,4 +1,4 @@
-# Vortex Language Philosophy
+# Vortex language philosophy
 
 Use this document when deciding whether a feature belongs in Vortex. For exact
 syntax, use the [formal grammar](specification/grammar.md). For examples and
@@ -54,7 +54,7 @@ understand completely, but rich enough to require important compiler techniques
 such as loop transformations, tiling, vectorization, parallel execution, memory
 layout selection, and hardware-specific code generation.
 
-## Target Workloads
+## Target workloads
 
 Vortex is intended for compute-intensive programs that perform structured
 operations over arrays, matrices, and tensors.
@@ -74,7 +74,7 @@ These workloads are a good fit for Vortex when they contain regular computation,
 large amounts of data parallelism, and optimization opportunities that can be
 reasoned about by the compiler.
 
-## Design Principles
+## Design principles
 
 ### 1. Give the compiler useful information
 
@@ -139,7 +139,7 @@ instructions, or ran work across several CPU cores.
 If the compiler cannot apply an expected optimization, it should explain why.
 The programmer should not have to guess why a program is slower than expected.
 
-## Performance Philosophy
+## Performance philosophy
 
 Performance is a primary design constraint, but source code should not be tied
 unnecessarily to one processor model.
@@ -178,7 +178,7 @@ The compiler may use cost models, benchmarking, or auto-tuning to choose among
 semantically equivalent schedules. Auto-tuning must not change the observable
 meaning of a program.
 
-## Safety Philosophy
+## Safety philosophy
 
 Vortex should prevent memory unsafety and data races in safe code. Its rules
 should be strong enough for the compiler to reason about mutation and aliasing
@@ -195,7 +195,7 @@ have documented behavior. More aggressive numerical transformations should
 require an explicit language mode or programmer permission when they can change
 observable results.
 
-## Hardware Philosophy
+## Hardware philosophy
 
 Vortex targets heterogeneous machines, beginning with CPUs and later expanding
 to GPUs. The language should expose hardware concepts when they affect program
@@ -210,7 +210,7 @@ Portability in Vortex means that a correct program can be compiled for supported
 targets. It does not mean that one schedule will perform equally well on every
 target.
 
-## Programmer and Compiler Responsibilities
+## Programmer and compiler responsibilities
 
 The programmer is responsible for:
 
@@ -246,7 +246,7 @@ Sparse linear algebra, automatic differentiation, distributed execution, and
 full-model machine learning may be explored later, but they are outside the
 initial language scope.
 
-## Initial Scope
+## Initial scope
 
 The first useful version of Vortex should be deliberately narrow. It should be
 able to express and compile a correct dense matrix multiplication using:
@@ -267,7 +267,7 @@ preserving its semantics. Optimization diagnostics, SIMD, multicore execution,
 GPU code generation, and automatic schedule search should be added incrementally
 after the basic language and CPU implementation are correct and measurable.
 
-## Guiding Test
+## Guiding test
 
 When considering a new feature, ask:
 
@@ -278,7 +278,7 @@ When considering a new feature, ask:
 If the answer is no, the feature probably does not belong in the initial Vortex
 language.
 
-## Feature Decision Worksheet
+## Feature decision worksheet
 
 Before adding a feature, write down answers to all of these questions:
 

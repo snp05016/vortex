@@ -1,7 +1,7 @@
 # 3. Programs and declarations
 
 A Vortex source file contains an ordered sequence of top-level declarations.
-V0.1 has two top-level declaration forms: functions and structs.
+Vortex v0.1 has two top-level declaration forms: functions and structs.
 
 ## 3.1 Program structure
 
@@ -168,7 +168,7 @@ scope use, and unresolved named types with the relevant source location.
 
 ## 3.8 Excluded declaration forms
 
-V0.1 has no modules, imports, namespaces, global variables, type aliases,
+Vortex v0.1 has no modules, imports, namespaces, global variables, type aliases,
 constants, enums, classes, traits, interfaces, generics, methods, overload
 sets, or separate function prototypes.
 

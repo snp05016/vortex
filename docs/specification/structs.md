@@ -135,6 +135,6 @@ field values.
 
 ## 8.9 Excluded struct features
 
-V0.1 has no field defaults, private fields, methods, constructors,
+Vortex v0.1 has no field defaults, private fields, methods, constructors,
 destructors, inheritance, anonymous structs, generics, extension declarations,
 or update syntax.

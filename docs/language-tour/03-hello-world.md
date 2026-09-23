@@ -1,6 +1,4 @@
-# Hello World and Program Entry
-
-[Previous: Basic source rules](02-basic-source-rules.md) | [Tour index](README.md) | [Next: Variables and types](04-variables-and-types.md)
+# Hello world and program entry
 
 ## Learning goals
 
@@ -72,10 +70,16 @@ it is not a valid executable program without `main`.
 
 ## Compiler handling
 
-The parser builds ordinary function-declaration nodes for `main` and other
-functions. A later semantic/program-validation pass checks that exactly one
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
+The parser (the [compiler stage](../compiler/guide/index.md) that checks how tokens fit together and builds the program's structure) builds ordinary function-declaration nodes for `main` and other
+functions. A later semantic/program-validation pass (see
+[semantic analysis](../specification/glossary.md)) checks that exactly one
 function is named `main`, has no parameters, and returns `void`. The runtime
 then begins execution at that validated function.
+
+</details>
 
 ## Practice and self-check
 

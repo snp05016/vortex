@@ -106,6 +106,7 @@ a specification chapter as an implementation claim.
 
 ## Related documents
 
+- [Building the Vortex compiler](guide/index.md), a stage-by-stage reading guide
 - [AST learning guide](ast-guide.md)
 - [Parser design](parser-design.md)
 - [Formal grammar](../specification/grammar.md)

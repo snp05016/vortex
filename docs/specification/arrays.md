@@ -143,7 +143,7 @@ let mut values = [1.0, 2.0, 3.0];
 values[0] = 10.0;
 ```
 
-V0.1 has fixed shapes. Assignment never resizes an array. Shape mismatch is a
+Vortex v0.1 has fixed shapes. Assignment never resizes an array. Shape mismatch is a
 type error rather than a request to truncate, pad, or reallocate.
 
 ## 7.8 Memory and layout
@@ -155,6 +155,6 @@ layout consistently and preserve observable indexing behavior.
 
 ## 7.9 Excluded array behavior
 
-V0.1 has no runtime-sized array types, vectors, slices, array views, open-ended
+Vortex v0.1 has no runtime-sized array types, vectors, slices, array views, open-ended
 index ranges, shape broadcasting, implicit reshaping, or built-in matrix
 operators. These require separate future specifications.

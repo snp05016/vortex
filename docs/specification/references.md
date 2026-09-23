@@ -1,7 +1,7 @@
 # 9. References and mutability
 
 References let a function access an existing value without exposing raw pointer
-arithmetic. V0.1 distinguishes shared references from mutable references.
+arithmetic. Vortex v0.1 distinguishes shared references from mutable references.
 
 ## 9.1 Reference types
 
@@ -94,7 +94,7 @@ The callee cannot retain a reference beyond its valid source lifetime.
 
 ## 9.7 Lifetimes
 
-A reference must never outlive the storage it references. V0.1 has no written
+A reference must never outlive the storage it references. Vortex v0.1 has no written
 lifetime syntax. The compiler must enforce the supported reference patterns
 through semantic analysis.
 
@@ -116,6 +116,6 @@ unfinished.
 
 ## 9.9 Excluded pointer behavior
 
-V0.1 has no raw pointers, null references, pointer arithmetic, address casts,
+Vortex v0.1 has no raw pointers, null references, pointer arithmetic, address casts,
 manual allocation, manual deallocation, user-visible unsafe blocks, or
 reference fields with unbounded lifetimes.

@@ -1,6 +1,4 @@
-# Kernels and Parallel Execution Planned for Later
-
-[Previous: Runtime and numerical rules](06-runtime-and-numerical-rules.md) | [Tour index](README.md) | [Next: Expressions](08-expressions.md)
+# Kernels and parallel execution planned for later
 
 ## Learning goals
 
@@ -29,8 +27,8 @@ kernel double_values(input: &[f32], output: &mut [f32]) {
 ```
 
 This sketch uses several unavailable features: the `kernel` keyword, slices,
-methods such as `.len()`, and accelerator execution. The v0.1 parser should not
-accept it.
+methods such as `.len()`, and accelerator execution. The v0.1 parser (the [compiler stage](../compiler/guide/index.md) that
+checks how tokens fit together) should not accept it.
 
 ## What you can do now
 
@@ -54,10 +52,15 @@ fn double_values(values: &mut [f32; 4]) {
 
 ## Compiler handling
 
-In v0.1, `kernel` is not a declaration form, so the frontend rejects the
-proposed example. Ordinary functions and loops follow the normal parser, type
+<details markdown="1">
+<summary>Which compiler stage enforces each rule (optional reading)</summary>
+
+In v0.1, `kernel` is not a declaration form, so the frontend (the early compiler
+stages that read and check source code) rejects the proposed example. Ordinary functions and loops follow the normal parser, type
 checker, and CPU code-generation path. Future kernel support will need explicit
 execution, memory, synchronization, and target rules before it becomes valid.
+
+</details>
 
 ## Practice and self-check
 

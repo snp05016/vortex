@@ -1,6 +1,4 @@
-# Basic Source Rules
-
-[Previous: Syntax philosophy](01-syntax-philosophy.md) | [Tour index](README.md) | [Next: Hello world](03-hello-world.md)
+# Basic source rules
 
 ## Learning goals
 
@@ -19,7 +17,7 @@ semicolons and braces, add comments, and use the supported escapes.
 
 - `//` comments on their own line.
 - `//` comments after code.
-- Comments between tokens where whitespace is allowed.
+- Comments between [tokens](../specification/glossary.md) where whitespace is allowed.
 
 ```vortex
 let width = 128; // image width
@@ -33,7 +31,7 @@ Block comments are not part of v0.1:
 /* not valid v0.1 syntax */
 ```
 
-The lexer skips a `//` comment but does not treat `//` inside a string as a
+The lexer (the [compiler stage](../compiler/guide/index.md) that splits source text into tokens) skips a `//` comment but does not treat `//` inside a string as a
 comment.
 
 ## Statements, blocks, and semicolons
@@ -60,7 +58,8 @@ if value > 0 {
 };                    // invalid: block statement followed by semicolon
 ```
 
-The parser enforces statement termination and matching braces.
+The parser (the compiler stage that checks how tokens fit together into
+statements and blocks) enforces statement termination and matching braces.
 
 ## Identifiers
 

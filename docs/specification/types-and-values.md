@@ -97,7 +97,7 @@ negation.
 A `char` stores one Unicode character. Its storage representation is an
 implementation detail, but it is not defined as a one-byte value.
 
-A `String` stores UTF-8 text. V0.1 specifies string literals and basic use with
+A `String` stores UTF-8 text. Vortex v0.1 specifies string literals and basic use with
 supported functions such as `print`. String mutation, indexing,
 interpolation, concatenation, searching, and numeric parsing are not yet
 specified.
@@ -119,7 +119,7 @@ rules.
 ## 4.8 Struct values
 
 A struct declaration introduces a named value type with ordered named fields.
-Struct values are constructed by naming each field. V0.1 defines no
+Struct values are constructed by naming each field. Vortex v0.1 defines no
 inheritance or object identity model.
 
 See [Structs](structs.md) for full rules.

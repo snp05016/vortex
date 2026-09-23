@@ -139,7 +139,7 @@ A runtime failure must stop the affected program execution and identify the
 error category. When source-location metadata is available, the report should
 include the originating operation.
 
-V0.1 does not specify exception handling inside the language, so a Vortex
+Vortex v0.1 does not specify exception handling inside the language, so a Vortex
 program cannot catch these runtime failures.
 
 ## 10.7 Verification requirements

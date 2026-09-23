@@ -1,7 +1,5 @@
 # Variables and types
 
-[Previous: Hello world](03-hello-world.md) | [Tour index](README.md) | [Next: Types planned for later](05-types-planned-for-later.md)
-
 ## Learning goals
 
 After this chapter, you should be able to declare mutable and immutable local
@@ -35,7 +33,7 @@ let width = 128;
 width = 256;              // width was not declared mut
 ```
 
-The parser checks that the declaration has the required pieces. Type checking
+The parser (the [compiler stage](../compiler/guide/index.md) that checks how tokens fit together and builds the program's structure) checks that the declaration has the required pieces. Type checking
 infers or verifies the type. Assignment checking later enforces mutability.
 
 ## Automatic type inference
@@ -89,7 +87,9 @@ let mut total = 0.0; // stands for mutable type
 
 total = total + 1.0;
 ```
-Mutable variables are variables that can be changed after they are created. Immutable variables cannot be changed after they are created.
+
+Mutable variables are variables that can be changed after they are
+created. Immutable variables cannot be changed after they are created.
 
 ## v0.1 type quick reference
 
@@ -128,16 +128,20 @@ machine the program is running on.
 let index: usize = 4;
 ```
 
-Invalid uses include assigning a negative value to `u32` or `usize`, applying
-integer-only operations to strings, and relying on an integer value outside its
-type's range:
+Invalid uses include:
+
+- assigning a negative value to `u32` or `usize`;
+- applying integer-only operations to strings;
+- relying on an integer value outside its type's range.
+
+For example:
 
 ```vortex
 let count: u32 = -1; // invalid: unsigned integers cannot be negative
 let name = "Vortex" % 2; // invalid: remainder requires integers
 ```
 
-The lexer records the integer literal. Unary `-` is represented separately.
+The lexer (the [compiler stage](../compiler/guide/index.md) that splits source text into tokens) records the integer literal. Unary `-` is represented separately.
 Type checking chooses or verifies `i32`, `u32`, or `usize` and checks whether
 the value and operation are legal.
 
@@ -168,9 +172,9 @@ let precise_value: f64 = 0.123456789;
 When a decimal number does not have an explicit type, Vortex treats it as an
 `f32`. This default fits Vortex's focus on numerical work across CPUs and GPUs.
 
-Types such as `f16` and `bf16` (brain float, with 7 mantissa bits, used for machine learning) 
-may be added later for machine-learning and GPU workloads. They are 
-not part of the first version of the language.
+Types such as `f16` and `bf16` (brain float, with 7 mantissa bits, used for
+machine learning) may be added later for machine-learning and GPU workloads.
+They are not part of the first version of the language.
 
 The `%`, bitwise, and shift operators are not defined for `f32` or `f64` in
 v0.1. Type checking rejects uses such as `3.0 & 1.0`.
@@ -291,7 +295,8 @@ let value = matrix[row, column];
 
 The type `[f32; 2, 2]` means a two-row, two-column array of `f32` values. Every
 dimension is part of the type and must be known during compilation. This gives
-the compiler the shape information it needs for matrix operations.
+the compiler the [shape](../specification/glossary.md) information (the list of dimension sizes) it
+needs for matrix operations.
 
 ### Dimension expressions
 
@@ -322,7 +327,8 @@ let fractional: [f32; 2.5] = [0.0; 2.5];
 // invalid: a dimension must evaluate to an integer
 ```
 
-The parser stores each dimension as an expression AST. Constant evaluation
+The parser stores each dimension as an expression
+[AST](../specification/glossary.md) (abstract syntax tree, the tree the parser builds from source). Constant evaluation
 reduces each expression to an integer, and type checking uses the evaluated
 dimensions when comparing array shapes. Code generation receives the final
 fixed layout rather than evaluating dimensions at runtime.
@@ -422,8 +428,8 @@ let shared = &value;      // valid: read-only reference
 let changed = &mut value; // invalid: value was not declared mut
 ```
 
-The parser records whether `mut` appears. Semantic analysis checks
-addressability, mutability, lifetime, and conflicting access. A reference is a
+The parser records whether `mut` appears. [Semantic analysis](../specification/glossary.md) (the checks on meaning that run after
+parsing) checks addressability, mutability, lifetime, and conflicting access. A reference is a
 safe connection to an existing value, not a raw integer memory address.
 
 ## Practice and self-check
