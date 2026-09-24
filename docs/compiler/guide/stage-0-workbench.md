@@ -234,7 +234,7 @@ it starts, never the wording.
 </g>
 <text class="vx-text-muted" x="30" y="282">Positions are written line:column. Only the category and position are compared here, not the wording.</text>
 </svg>
-<figcaption>Figure 2. A test run seen as a grid, one row per test. The runner checks the rows one after another. The last row fails because a program that should have been rejected was accepted, which is exactly the kind of mistake the bench exists to catch. Each invalid test holds its statement inside <code>fn main() {</code> and <code>}</code>, on line 2, indented four spaces. Lines and columns both count from 1, as <a href="../../../specification/conformance/#17-source-locations">Conformance 1.7</a> requires.</figcaption>
+<figcaption>Figure 2. A test run seen as a grid, one row per test. The runner checks the rows one after another. The last row fails because a program that should have been rejected was accepted, which is exactly the kind of mistake the bench exists to catch. Each invalid test holds its statement inside <code>fn main() {</code> and <code>}</code>, on line 2, indented four spaces. Lines and columns both count from 1, as <a href="../../specification/conformance.md#17-source-locations">Conformance 1.7</a> requires.</figcaption>
 </figure>
 
 ## Why the tests come first

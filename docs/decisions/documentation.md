@@ -132,7 +132,7 @@ built yet"?
 used Planned for a design direction that is not part of v0.1, and
 [stage 11](../compiler/guide/stage-11-release.md#compiling-every-example-in-the-documentation)
 told the compiler to reject planned examples. The
-[status vocabulary](../README.md#v01-status-vocabulary) in the docs README
+[status vocabulary](https://github.com/snp05016/vortex_language/blob/main/docs/README.md#v01-status-vocabulary) in the docs README
 used the same word for behavior that is "intended but not yet implemented".
 
 **Options.**
