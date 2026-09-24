@@ -1,0 +1,10 @@
+# codespell flags known misspellings only, so project jargon needs no word list.
+# Run from the repo root (CI does the same):
+#   codespell docs includes examples tools/docs mkdocs.yml
+[codespell]
+# Build output and generated or binary files.
+skip = ./site,./build,*.svg,*.woff2,*.pyc,*.egg-info
+# Correct words that codespell's dictionary lists as misspellings:
+#   resutl  deliberate typo in the name-resolution example (compiler/guide/index.md)
+#   wirth   Niklaus Wirth, cited in the reading list
+ignore-words-list = resutl,wirth

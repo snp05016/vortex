@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 # Vortex
 
 <p class="lead">Vortex is a small, statically typed language for math-heavy code like matrix multiplication.</p>

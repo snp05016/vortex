@@ -1,0 +1,69 @@
+# Sentence case for headings: capitalize the first word and proper nouns only.
+# Numbered headings ("3.1 Scopes", "10. Diagnostics") are handled by Vale: the
+# word after a leading number is treated as the first word.
+extends: capitalization
+message: "Use sentence case for headings: '%s'."
+level: error
+scope: heading
+match: $sentence
+# A capital is also fine right after a colon ("Milestone 2: Lexer").
+indicators:
+  - ":"
+# Proper nouns and acronyms used in docs/. Entries are regular expressions.
+exceptions:
+  - AArch64
+  - ABI
+  - API
+  - Apple
+  - ARM
+  - ASCII
+  - ASTs?
+  # "C", "C++" and "I" are anchored: Vale also accepts any capitalized word
+  # that merely contains an exception, so a bare "C" would let "Compiler" pass.
+  - ^C(?:\+\+)?$
+  - CFG
+  - Clang
+  - CMake
+  - CPUs?
+  - CUDA
+  - EBNF
+  - FileCheck
+  - GCC
+  - GPUs?
+  - HIR
+  - HTML
+  - ^I$
+  - IDE
+  - IEEE
+  - IRs?
+  - JIT
+  - Kaleidoscope
+  - Linux
+  - LL # as in "LL(1)"
+  - LLMs?
+  - LLVM
+  - macOS
+  - Metal
+  - MIR
+  - MLIR
+  - NaN
+  - Nystrom
+  - Pratt
+  - PTX
+  - Python
+  - README
+  - RISC-V
+  - Rust
+  - SIMD
+  - SPIR-V
+  - SSA
+  - SVG
+  - Unicode
+  - UTF-8
+  - Vortex
+  - Windows
+  - x86-64
+  # Version strings. Only "v0" of "v0.1" is matched on purpose: a full "v0.1"
+  # looks like a numbered heading ("3.1 Title") to Vale, which would then
+  # expect the next word to be capitalized.
+  - v\d+

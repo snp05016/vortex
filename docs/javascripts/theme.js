@@ -1,108 +1,16 @@
+// Page enhancements for the Vortex docs (Zensical classic / Material).
+//
+// With navigation.instant on, pages are swapped without a full reload, so
+// every initialiser runs from document$.subscribe, which fires on the first
+// load and after each instant navigation.
+
 (function () {
-  const storageKey = "vortex-docs-theme";
-  const root = document.documentElement;
-  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  // highlight.js runs highlightAll() on DOMContentLoaded, so registering here
-  // (this script loads at the end of <body>) is early enough.
-  if (window.hljs) {
-    window.hljs.registerLanguage("vortex", function (hljs) {
-      return {
-        name: "Vortex",
-        keywords: {
-          keyword: "fn let mut struct return if else while for in break continue",
-          type: "void bool char i32 u32 usize f32 f64 String",
-          literal: "true false",
-        },
-        contains: [
-          hljs.C_LINE_COMMENT_MODE,
-          hljs.QUOTE_STRING_MODE,
-          { scope: "string", begin: /'(\\.|[^\\'])'/ },
-          hljs.C_NUMBER_MODE,
-        ],
-      };
-    });
-  }
-
-  function savedTheme() {
-    try {
-      const value = window.localStorage.getItem(storageKey);
-      return value === "light" || value === "dark" ? value : null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function preferredTheme() {
-    return savedTheme() || (systemTheme.matches ? "dark" : "light");
-  }
-
-  function applyTheme(theme) {
-    root.dataset.theme = theme;
-    const button = document.querySelector(".theme-toggle");
-    if (!button) {
-      return;
-    }
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    button.textContent = `Use ${nextTheme} theme`;
-    button.setAttribute("aria-label", `Use ${nextTheme} theme`);
-    button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
-  }
-
-  function addThemeToggle() {
-    const searchArea = document.querySelector(".wy-side-nav-search");
-    if (!searchArea || searchArea.querySelector(".theme-toggle")) {
-      return;
-    }
-
-    const button = document.createElement("button");
-    button.className = "theme-toggle";
-    button.type = "button";
-    button.addEventListener("click", function () {
-      const nextTheme = root.dataset.theme === "dark" ? "light" : "dark";
-      try {
-        window.localStorage.setItem(storageKey, nextTheme);
-      } catch (error) {
-        // Storage can be unavailable; the toggle still works for this page.
-      }
-      applyTheme(nextTheme);
-    });
-    searchArea.appendChild(button);
-    applyTheme(preferredTheme());
-  }
-
-  function addCopyButtons() {
-    document.querySelectorAll(".rst-content pre").forEach(function (pre) {
-      const code = pre.querySelector("code");
-      if (!code || pre.querySelector(".copy-button")) {
-        return;
-      }
-      const button = document.createElement("button");
-      button.className = "copy-button";
-      button.type = "button";
-      button.textContent = "Copy";
-      button.setAttribute("aria-label", "Copy code to clipboard");
-      button.addEventListener("click", function () {
-        navigator.clipboard.writeText(code.textContent).then(
-          function () {
-            button.textContent = "Copied";
-          },
-          function () {
-            button.textContent = "Press Ctrl+C";
-          }
-        );
-        window.setTimeout(function () {
-          button.textContent = "Copy";
-        }, 1600);
-      });
-      pre.appendChild(button);
-    });
-  }
-
-  // Without JavaScript every .vx-step stays visible; with it, readers step
-  // through one panel at a time.
-  function enhanceSteppers() {
-    document.querySelectorAll(".vx-stepper").forEach(function (stepper) {
+  // Step-through panels. Without JavaScript every .vx-step stays visible;
+  // with it, readers step through one panel at a time.
+  function enhanceSteppers(root) {
+    root.querySelectorAll(".vx-stepper").forEach(function (stepper) {
       const steps = stepper.querySelectorAll(".vx-step");
       if (steps.length < 2 || stepper.classList.contains("is-enhanced")) {
         return;
@@ -143,32 +51,62 @@
     });
   }
 
-  // CSS animations are switched off by a prefers-reduced-motion rule in
-  // extra.css; SVG <animate> elements need to be paused from script.
-  function pauseSvgAnimationsIfReduced() {
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-    document.querySelectorAll(".vx-figure svg").forEach(function (svg) {
-      if (svg.pauseAnimations) {
+  // Every animated figure gets a pause/play button (WCAG 2.2.2). CSS
+  // animations pause through the .is-paused class; SVG <animate> elements
+  // through pauseAnimations(). Readers who prefer reduced motion start paused.
+  const animatedSelector = ".vx-flow, .vx-seq, .vx-travel, .vx-pulse";
+
+  function isAnimated(figure) {
+    return (
+      figure.querySelector(animatedSelector) !== null ||
+      figure.querySelector("animate, animateMotion, animateTransform") !== null
+    );
+  }
+
+  function setPaused(figure, button, paused) {
+    figure.classList.toggle("is-paused", paused);
+    figure.querySelectorAll("svg").forEach(function (svg) {
+      if (paused && svg.pauseAnimations) {
         svg.pauseAnimations();
-        svg.setCurrentTime(0);
+      } else if (!paused && svg.unpauseAnimations) {
+        svg.unpauseAnimations();
+      }
+    });
+    button.textContent = paused ? "Play animation" : "Pause animation";
+    button.setAttribute("aria-pressed", paused ? "true" : "false");
+  }
+
+  function addAnimationControls(root) {
+    root.querySelectorAll(".vx-figure").forEach(function (figure) {
+      if (!isAnimated(figure) || figure.querySelector(".vx-anim-toggle")) {
+        return;
+      }
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "vx-anim-toggle";
+      button.addEventListener("click", function () {
+        setPaused(figure, button, !figure.classList.contains("is-paused"));
+      });
+      figure.insertBefore(button, figure.firstChild);
+      setPaused(figure, button, reducedMotion.matches);
+      if (reducedMotion.matches) {
+        figure.querySelectorAll("svg").forEach(function (svg) {
+          if (svg.setCurrentTime) {
+            svg.setCurrentTime(0);
+          }
+        });
       }
     });
   }
 
-  applyTheme(preferredTheme());
+  function init() {
+    enhanceSteppers(document);
+    addAnimationControls(document);
+  }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    addThemeToggle();
-    addCopyButtons();
-    enhanceSteppers();
-    pauseSvgAnimationsIfReduced();
-  });
-
-  systemTheme.addEventListener("change", function () {
-    if (!savedTheme()) {
-      applyTheme(preferredTheme());
-    }
-  });
+  if (typeof document$ !== "undefined") {
+    document$.subscribe(init);
+  } else {
+    document.addEventListener("DOMContentLoaded", init);
+  }
 })();
