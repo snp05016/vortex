@@ -19,6 +19,7 @@ matrix multiplication are working. This keeps v0.1 small and achievable.
 ## Proposed example, not v0.1 syntax
 
 ```vortex
+// items: planned
 kernel double_values(input: &[f32], output: &mut [f32]) {
     for i in 0..input.len() {
         output[i] = input[i] * 2.0;
@@ -35,6 +36,7 @@ checks how tokens fit together) should not accept it.
 Write an ordinary CPU function using fixed-size arrays and explicit bounds:
 
 ```vortex
+// items: valid
 fn double_values(values: &mut [f32; 4]) {
     for index in 0..4 {
         values[index] *= 2.0;

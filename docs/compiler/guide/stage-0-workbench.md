@@ -27,11 +27,13 @@ whether the compiler still does everything it did yesterday.
 
 There are three pieces. The first is a **driver**: the program the user
 actually runs, called `vortex`, which takes the path of a Vortex source file.
-For now it reads nothing and translates nothing. The second is a repeatable
-**build**: a fixed recipe that turns the compiler's own source code into the
-`vortex` program, the same way on every machine and from a clean start. The
-third is a **test runner** with folders of example programs and the results
-they are expected to produce.
+Its full command line, `vortex <source> [-o <output> | --tokens | --ast]`, is
+fixed in the [command-line decision](../../decisions/program.md#d20); this
+stage needs only the path. For now it reads nothing and translates nothing.
+The second is a repeatable **build**: a fixed recipe that turns the
+compiler's own source code into the `vortex` program, the same way on every
+machine and from a clean start. The third is a **test runner** with folders of
+example programs and the results they are expected to produce.
 
 ## Words for this stage
 
@@ -147,15 +149,17 @@ first end-to-end program, from
 example of what such a test will eventually check:
 
 ```vortex
+// program: valid
 fn main() {
     let result = 2 + 3 * 4;
     print(result);
 }
 ```
 
-Its expected output is the single line `14`. Earlier stages have their own
-kinds of expected output. The lexer's tests expect a list of tokens. The
-parser's tests expect a printed tree.
+Its expected output is the single line `14` on standard output, and its
+expected exit status is 0 ([decision](../../decisions/program.md#d14)).
+Earlier stages have their own kinds of expected output. The lexer's tests
+expect a list of tokens. The parser's tests expect a printed tree.
 
 An invalid program's test says "this must be rejected, for this reason, at this
 place". The reason and the place matter as much as the rejection. The
@@ -166,6 +170,7 @@ part of the source. It also asks for "a nearby accepted program", so the test
 proves the compiler is rejecting the broken form and not something wider.
 
 ```vortex
+// statements: type error
 let value: bool = 10;
 ```
 
@@ -173,7 +178,11 @@ The specification's required result for this line is a type error that relates
 the initializer `10` to the written type `bool`. A test that only checks "the
 compiler failed" would also pass if the compiler failed for a completely
 different reason, such as crashing. That is why the expected output for an
-invalid program records the category and the location, not just the failure.
+invalid program records the category and the location as well as the failure.
+
+The label on the block's first line says it is a statement, so its test file
+places it inside `fn main() { ... }`. On its own at the top of a file it would
+be a syntax error, because statements are not allowed outside functions.
 
 The specification also says that the exact wording of error messages is left
 to the implementation. That gives you a decision to make early: will your
@@ -181,12 +190,15 @@ tests compare whole messages word for word, or only the category and the
 location? Comparing whole messages catches accidental changes to wording but
 forces you to update many files whenever you improve a message. Comparing only
 the category and position is sturdier. Either is fine. Pick one and write it
-down.
+down. The suggested default,
+[implementation choice I3](../../decisions/implementation.md#i3), compares the
+exit status and, for every error in order, its category and the position where
+it starts, never the wording.
 
 <figure class="vx-figure">
 <svg viewBox="0 0 760 290" role="img" aria-labelledby="grid-title grid-desc">
 <title id="grid-title">A test run as a grid of expected and actual results</title>
-<desc id="grid-desc">Four rows, one per test program. Each row shows the expected result, the actual result and the verdict. Three rows pass. The fourth expects a lexical error at line 1, column 13, but the compiler accepted the file, so the row is marked FAIL.</desc>
+<desc id="grid-desc">Four rows, one per test program. Each row shows the expected result, the actual result and the verdict. Three rows pass. The fourth expects a lexical error at line 2, column 17, but the compiler accepted the file, so the row is marked FAIL.</desc>
 <text class="vx-text-muted" x="30" y="30">test program</text>
 <text class="vx-text-muted" x="280" y="30">expected</text>
 <text class="vx-text-muted" x="470" y="30">actual</text>
@@ -202,27 +214,27 @@ down.
 <g class="vx-seq" style="--vx-i: 1; --vx-n: 4">
 <rect class="vx-box" x="20" y="108" width="720" height="44"/>
 <text class="vx-mono" x="30" y="135">invalid/missing_colon</text>
-<text class="vx-mono" x="280" y="135">syntax, 1:11</text>
-<text class="vx-mono" x="470" y="135">syntax, 1:11</text>
+<text class="vx-mono" x="280" y="135">syntax, 2:15</text>
+<text class="vx-mono" x="470" y="135">syntax, 2:15</text>
 <text class="vx-text" x="660" y="135">PASS</text>
 </g>
 <g class="vx-seq" style="--vx-i: 2; --vx-n: 4">
 <rect class="vx-box" x="20" y="162" width="720" height="44"/>
 <text class="vx-mono" x="30" y="189">invalid/bool_from_int</text>
-<text class="vx-mono" x="280" y="189">type, 1:19</text>
-<text class="vx-mono" x="470" y="189">type, 1:19</text>
+<text class="vx-mono" x="280" y="189">type, 2:23</text>
+<text class="vx-mono" x="470" y="189">type, 2:23</text>
 <text class="vx-text" x="660" y="189">PASS</text>
 </g>
 <g class="vx-seq" style="--vx-i: 3; --vx-n: 4">
 <rect class="vx-box-bad" x="20" y="216" width="720" height="44"/>
 <text class="vx-mono" x="30" y="243">invalid/open_string</text>
-<text class="vx-mono" x="280" y="243">lexical, 1:13</text>
+<text class="vx-mono" x="280" y="243">lexical, 2:17</text>
 <text class="vx-mono" x="470" y="243">accepted</text>
 <text class="vx-text-accent" x="660" y="243">FAIL</text>
 </g>
 <text class="vx-text-muted" x="30" y="282">Positions are written line:column. Only the category and position are compared here, not the wording.</text>
 </svg>
-<figcaption>Figure 2. A test run seen as a grid, one row per test. The runner checks the rows one after another. The last row fails because a program that should have been rejected was accepted, which is exactly the kind of mistake the bench exists to catch.</figcaption>
+<figcaption>Figure 2. A test run seen as a grid, one row per test. The runner checks the rows one after another. The last row fails because a program that should have been rejected was accepted, which is exactly the kind of mistake the bench exists to catch. Each invalid test holds its statement inside <code>fn main() {</code> and <code>}</code>, on line 2, indented four spaces. Lines and columns both count from 1, as <a href="../../../specification/conformance/#17-source-locations">Conformance 1.7</a> requires.</figcaption>
 </figure>
 
 ## Why the tests come first
@@ -237,10 +249,18 @@ afterwards, tests tend to record whatever the code happens to do, including
 its mistakes.
 
 The second is that Vortex already has most of the tests written for you, in
-prose. The specification is full of `vortex` examples marked valid or invalid,
-and the [conformance chapter](../../specification/conformance.md#18-specification-examples)
-explains the labels. Turning those examples into test files is steady,
-mechanical work, and it ties the compiler to the documents from the first day.
+prose. The specification is full of `vortex` examples, and the first line of
+each is a label, such as `// statements: type error`, that says what kind of
+code the block holds and what the compiler must do with it
+([decision 28](../../decisions/documentation.md#d28)). The
+[conformance chapter](../../specification/conformance.md#18-specification-examples)
+explains the labels. Because the label also says how to complete a block
+(statements go inside `fn main() { ... }`, a block of declarations gets an
+empty `main`, and a fragment is skipped), turning examples into test files is
+steady, mechanical work, and it ties the compiler to the documents from the
+first day. A small checker that reads the examples straight from the pages,
+instead of copying them, is the suggested default in
+[implementation choice I10](../../decisions/implementation.md#i10).
 
 The third is regressions. A compiler is a long chain of stages, and a change in
 an early one quietly affects every later one. The roadmap asks you to "run all
@@ -265,7 +285,11 @@ it. One option is to add tests only when their stage begins. Another is to add
 them all now and mark the ones that belong to later stages as expected to
 fail. LLVM's test tool has a result for exactly this, XFAIL, alongside a
 separate result, XPASS, for a test that was expected to fail but
-passed.[^lit] Either approach works as long as the report stays honest.
+passed.[^lit] Either approach works as long as the report stays honest. The
+suggested default,
+[implementation choice I9](../../decisions/implementation.md#i9), is the
+second: each marked test names the stage that will make it pass, and a marked
+test that starts passing fails the run until its mark is removed.
 
 ## What you need to have
 
@@ -276,10 +300,16 @@ passed.[^lit] Either approach works as long as the report stays honest.
 
 - A `vortex` command that accepts a source-file path: every later stage hangs
   off it.
-- A sensible response to a missing path or a wrong number of arguments: a short
-  usage message and a failing exit status, not a crash.
-- A documented exit-status rule, such as zero for success and non-zero for any
-  error: the test runner and scripts depend on it.
+- A sensible response to a missing path, an unknown option or a wrong number
+  of arguments: a short usage message on standard error and exit status 2, not
+  a crash.
+- The exit statuses from the
+  [command-line decision](../../decisions/program.md#d20): 0 for success, 1
+  when the source has errors, 2 for usage and file problems. The test runner
+  and scripts depend on them.
+- A runner that ignores warnings: a compiler may print them, but they never
+  change the exit status or whether a program is accepted
+  ([Diagnostics 10.1](../../specification/diagnostics.md#101-required-diagnostic-data)).
 - A build that works from a clean configuration: the roadmap's first piece of
   evidence for every milestone.
 - A test runner that finds test cases by itself: adding a test should mean
@@ -332,8 +362,8 @@ translation yet. In practice, you are finished when all of these are true:
 
 - On a fresh checkout, with no leftover build files, the one command builds
   `vortex` and runs the tests without any manual step in between.
-- `vortex` with no arguments prints a usage message and ends with a failing
-  exit status.
+- `vortex` with no arguments prints a usage message on standard error and ends
+  with exit status 2.
 - The runner reports at least one pass and, when you plant a deliberate
   failure, at least one fail, naming the test and saying what differed.
 - The whole command's exit status is failing when any test fails.

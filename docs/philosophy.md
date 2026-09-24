@@ -24,7 +24,8 @@ teaching material, use the [language tour](language-tour/README.md).
 
 - statically typed scalar values, structs, fixed-size arrays, and references;
 - explicit mutation and structured control flow;
-- array dimension expressions whose values can be proven at compile time;
+- array dimension expressions built from integer literals and arithmetic, whose
+  values the compiler computes;
 - clear numerical kernels that expose useful type and shape information;
 - safe CPU execution with documented runtime checks.
 
@@ -111,7 +112,9 @@ quietly change its answer.
 Rules about number calculations, changing values, memory, and parallel work
 should be written down clearly. If an optimization could slightly change a
 floating-point result, Vortex should only use it when the programmer has allowed
-that kind of change.
+that kind of change. In v0.1 no such permission exists: every floating-point
+operation rounds once, in the written order
+([floating-point strictness](decisions/numbers.md#d56)).
 
 ### 4. Make the simple version work well
 
@@ -184,14 +187,20 @@ Vortex should prevent memory unsafety and data races in safe code. Its rules
 should be strong enough for the compiler to reason about mutation and aliasing
 without relying on undocumented programmer assumptions.
 
-The exact ownership and memory model has not yet been selected. It should be
-designed around the needs of numerical kernels rather than copied wholesale
-from an existing systems language. Any future unsafe operations must be explicit,
-localized, and justified by interoperability or low-level hardware access.
+For v0.1 the reference model is deliberately small: references appear only as
+parameters and immutable local bindings, a `let` borrow lasts to the end of its
+block, and while a `&mut` borrow is live nothing else can reach the borrowed
+variable ([decision](decisions/references.md#d41)). A fuller ownership and
+memory model has not yet been selected. It should be designed around the needs
+of numerical kernels rather than copied wholesale from an existing systems
+language. Any future unsafe operations must be explicit, localized, and
+justified by interoperability or low-level hardware access.
 
 Numerical safety is separate from memory safety. Integer overflow, floating-point
 reassociation, reduced precision, and non-deterministic parallel reductions must
-have documented behavior. More aggressive numerical transformations should
+have documented behavior. For v0.1 integers,
+[Expressions 5.5](specification/expressions.md#checked-integer-operations)
+lists every checked operation. More aggressive numerical transformations should
 require an explicit language mode or programmer permission when they can change
 observable results.
 
@@ -228,7 +237,7 @@ The compiler is responsible for:
 - explaining major optimization decisions and missed optimizations;
 - never presenting an unverified performance estimate as a measured result.
 
-## Non-Goals
+## Non-goals
 
 Vortex is not initially intended to be:
 
@@ -258,7 +267,7 @@ able to express and compile a correct dense matrix multiplication using:
 - functions, local variables, conditionals, and structured loops;
 - explicit mutation and basic shared and mutable references;
 - checked runtime behavior for invalid array access, division by zero, integer
-  overflow, and invalid casts;
+  overflow, invalid shift counts, and invalid casts;
 - a simple CPU backend that produces correct, unoptimized programs.
 
 After v0.1 is correct, the first optimization milestone is to transform a
@@ -295,8 +304,8 @@ Example decision for expression-based array dimensions:
 
 | Question | Decision |
 | --- | --- |
-| Useful program | `[f32; tile_size * 2]` makes derived fixed shapes readable. |
-| Allowed | Integer expressions evaluable during compilation. |
-| Not allowed in v0.1 | Runtime-dependent dimensions such as a function parameter. |
-| Compiler responsibility | Parse an expression, evaluate it as a constant, then require a positive `usize`-compatible value. |
-| Failure diagnostic | Explain which dimension is non-constant, non-integer, negative, too large, or violates the separately documented zero-extent policy. |
+| Useful program | `[f32; 16 * 2]` keeps a derived fixed shape readable; named sizes such as `tile_size * 2` wait for `const`, planned as the first addition after v0.1. |
+| Allowed | Integer constant expressions: integer literals combined with `+`, `-`, `*`, `/`, `%` and parentheses. |
+| Not allowed in v0.1 | Any name or call in a dimension, including a function parameter or an immutable variable. |
+| Compiler responsibility | Parse an expression, check that it is an integer constant expression, evaluate it with checked `usize` arithmetic, then require a value of at least 1 ([decision](decisions/arrays.md#d11)). |
+| Failure diagnostic | A constant-evaluation error that names the dimension and the reason: not a constant expression, not an integer, arithmetic that goes negative or too large, or zero ([decision](decisions/arrays.md#d10)). |

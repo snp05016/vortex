@@ -116,6 +116,10 @@ def heading_slugs(page):
     text = strip_fences((DOCS / page).read_text(encoding="utf-8"))
     slugs = set()
     for heading in re.findall(r"^#{1,6}\s+(.+?)\s*#*$", text, re.M):
+        explicit = re.search(r"\{:?\s*#([\w.-]+)[^}]*\}$", heading)  # attr_list id
+        if explicit:
+            slugs.add(explicit.group(1))
+            continue
         heading = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading).replace("`", "")
         slugs.add(slugify(heading, "-"))
     return slugs

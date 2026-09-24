@@ -12,9 +12,9 @@ None of this is new to the front end. The parser already builds trees for
 `if`, `while` and `for`, name resolution already knows which variable each
 name refers to, and [stage 5](stage-5-types-and-rules.md) already checked that
 every condition is a `bool`, that `break` sits inside a loop, and that every
-path through a non-`void` function returns a value. What is new is the back
-end's side: turning those structured statements into the jumps a processor
-actually follows.
+non-`void` function ends with a statement that always returns. What is new is
+the back end's side: turning those structured statements into the jumps a
+processor actually follows.
 
 This stage stays on the right slope of the
 [overview's mountain](index.md#the-shape-of-the-whole-thing). It widens the
@@ -127,6 +127,7 @@ again. Calls always finish in the reverse order to how they started, so a stack
 is all the bookkeeping needed.
 
 ```vortex
+// program: valid
 fn square(value: i32) -> i32 {
     return value * value;
 }
@@ -208,31 +209,36 @@ This prints `25`. Figure 1 shows the stack at each step.
 Several rules from the docs shape what a call must do.
 
 **Arguments are evaluated left to right.** The
-[expressions chapter](../../specification/expressions.md) requires
-left-to-right evaluation for call arguments. In `sum_squares`, `square(left)`
-runs before `square(right)`. With `print` inside a function, the order becomes
-visible in the output, so it is testable.
+[expressions chapter](../../specification/expressions.md#510-evaluation-order)
+requires left-to-right evaluation for call arguments. With `print` inside a
+function, the order becomes visible in the output, so it is testable. The same
+rule covers the operands of every operator: in `square(left) + square(right)`,
+the left call runs first ([decision 38](../../decisions/statements.md#d38)).
 
 **Each parameter receives its argument's value.** Stage 5 checked that the
 count and types match. Passing arrays and structs by reference, without
 copying, is [stage 8](stage-8-data-in-memory.md)'s work.
 
 **The return value arrives where the call was.** A call can sit inside a
-larger expression, as `square(left) + square(right)` does. A `void` call cannot
-produce a value, and the tour notes it is still valid as an expression
-statement.
+larger expression, as `square(left) + square(right)` does. A `void` call
+produces no value, so it may appear only as an expression statement; stage 5
+has already rejected any other use
+([decision](../../decisions/operators.md#d44)).
 
-**Functions can be called from anywhere in the file.** The declarations
-chapter says functions and structs "may appear in either order", so `main` may
-call a function defined below it. Include a test for that. One sentence in the
-[declarations tour](../../language-tour/10-declarations.md), that a program can
-call a function "after its declaration has been recorded by the compiler",
-could be read more narrowly. The specification is the higher authority, but
-the wording is worth confirming.
+**Functions can be called from anywhere in the file.** The
+[declarations chapter](../../specification/declarations.md#31-program-structure)
+makes every top-level name visible throughout the file
+([decision record](../../decisions/names.md#d3)), so `main` may call a function
+defined below it. Include a test for that.
 
-**A function may call itself.** Nothing in the specification forbids it, and
-the call stack handles it without any special case, because each call gets its
-own frame.
+**A function may call itself, and two functions may call each other.** The
+same rule makes both legal, and the call stack handles them without any
+special case, because each call gets its own frame.
+
+The stack is finite, though. A recursion that never stops, or goes too deep,
+runs out of stack, and Vortex requires the program to stop with a report
+rather than crash; [stage 9](stage-9-runtime-safety.md) adds that check
+([record 46](../../decisions/diagnostics.md#d46)).
 
 How arguments and return values physically travel between caller and callee
 is the **calling convention**. It depends on the back end chosen in stage 6.
@@ -279,8 +285,11 @@ Two details make `if` harder than it first looks.
 
 **A branch that returns does not reach the join point.** If the `then` block
 ends with `return`, it has no edge to the code after the `if`. Code
-generation must not add one. This is the same path structure stage 5 checked
-when it made sure every path returns a value.
+generation must not add one. This is the same structure stage 5 checked when it
+made sure that the body of every non-`void` function ends in a terminating
+statement ([decision 9](../../decisions/statements.md#d9)). Because of that
+check, the code for a non-`void` function never reaches its closing brace; only
+a `void` function returns there.
 
 **`&&` and `||` are control flow too.** The expressions chapter requires that
 they "evaluate the right operand only when required", and calls this behavior
@@ -302,6 +311,7 @@ the loop. `continue` goes back to the header, where the condition is checked
 again. Here is a loop that uses both:
 
 ```vortex
+// program: valid
 fn main() {
     let mut count = 0;
     let mut total = 0;
@@ -383,14 +393,14 @@ worth reading them exactly:
 
 - `for`, an identifier, `in`, an expression, and a block;
 - the identifier "introduces one loop-local variable";
-- the expression after `in` "must be iterable", and "v0.1 iteration is
-  specified for integer ranges";
+- the expression after `in` must be a range, possibly in parentheses;
 - the loop variable "is visible only in the body";
 - C-style `for` syntax and multiple loop bindings are not accepted.
 
 The [expressions chapter](../../specification/expressions.md) adds what a range
-means. `start..end` excludes `end`; `start..=end` includes it. When a range is
-used for iteration, both endpoints "must have compatible integer types". The
+means. `start..end` excludes `end`; `start..=end` includes it. Both endpoints
+must have the same integer type, and the loop variable takes that type
+([statements, 6.8](../../specification/statements.md#68-for-loops)). The
 [statements tour](../../language-tour/09-statements.md) gives the plain example:
 `for index in 0..4` visits `0`, `1`, `2` and `3`.
 
@@ -401,28 +411,22 @@ The difference is a step that moves the loop variable to the next value.
 through that step. A `continue` that jumps straight to the header would test
 the same value again and never finish.
 
-### What the specification does not yet say
+### What the specification says about `for` loops {#what-the-specification-does-not-yet-say}
 
-Several questions about `for` loops are not answered in the docs. Code
-generation cannot pick an answer quietly, because each choice is visible in
-program behavior. Each one needs a written decision and a test.
+[Decision 13](../../decisions/statements.md#d13) answers the questions code
+generation depends on. Each answer is visible in program behavior, so each
+needs a test.
 
-- **The loop variable's type.** The grammar notes say the variable "receives
-  the element type", but no chapter says what the element type of an integer
-  range is. The obvious candidate is the endpoints' type, but it is not
-  written down.
-- **Whether the loop variable can be assigned.** It is "one loop-local
-  variable", and ordinary bindings are immutable unless declared `mut`, but the
-  `for` syntax has no place to write `mut`.
-- **When the endpoints are evaluated.** If `end` is a variable that the body
-  changes, it matters whether the range was fixed when the loop started.
-- **Ranges that contain no values.** What a loop over a range whose start is
-  not below its end does is not stated in words, though the "excludes end"
-  rule suggests it runs zero times.
-- **Inclusive ranges at the top of a type.** For `..=` ending at the largest
-  value of its type, moving past the last value would overflow. Since integer
-  overflow is a checked runtime error in v0.1, the decision has to make sure
-  the loop does not report an overflow the program never asked for.
+- **When the endpoints are evaluated.** Once, start then end, before the first
+  iteration, so a body that changes `end` does not change the loop.
+- **The loop variable's type.** It has the endpoints' type.
+- **Whether the loop variable can be assigned.** It cannot: it is immutable,
+  and it is a fresh variable in each iteration.
+- **Ranges that contain no values.** `start..end` runs zero times when
+  `start >= end`, and `start..=end` zero times when `start > end`.
+- **Inclusive ranges at the top of a type.** An inclusive loop must stop after
+  the iteration for `end` without computing `end + 1`, so a range that ends at
+  the largest value of its type never trips the overflow check.
 
 ## Break, continue and early return
 
@@ -439,9 +443,10 @@ straight back to the caller. In a non-`void` function it carries a value.
 In a `void` function it is a bare `return;`, which the tour's
 `print_positive` example uses to finish early.
 
-After any of these three, the rest of the block cannot run. The specification
-does not list unreachable statements as an error, so a program with code after
-a `return` is still valid. The generated code must simply never reach it.
+After any of these three, the rest of the block cannot run. Statements there
+are still valid and still checked
+([decision 9](../../decisions/statements.md#d9)), but the generated code must
+never reach them.
 
 ## Nested blocks and local variables
 
@@ -460,9 +465,11 @@ takes the most recent locals with it.[^ci-locals]
 A `let` inside a loop body runs on every pass through the body. Each iteration
 gets a fresh variable with a freshly computed initializer. That is easy to get
 right by accident and easy to get wrong when optimizing, so it deserves a
-test. The declarations chapter leaves one related rule open: whether an inner
-block may declare a local with the same name as an outer one. Until that
-shadowing policy is decided, tests should avoid depending on it.
+test. One related rule is settled in stage 4: an inner block may not declare a
+local with the same name as a visible outer one, because Vortex has no
+shadowing ([decision record](../../decisions/names.md#d2)). So at any point in
+a program each name means exactly one variable, and code generation never has
+to choose between two.
 
 ## Tests for nested control flow
 
@@ -479,12 +486,17 @@ missing or misplaced jump changes what the program prints.
 | `if` without `else` whose branch returns | The code after the `if` runs only when the condition is false. |
 | `while` whose condition starts false | The body runs zero times. |
 | `for index in 0..4` and `0..=4` | The body sees exactly the documented values. |
+| `for i in 0..end` whose body changes `end` | The loop runs the number of times fixed at the start. |
+| `for i in 5..2` and `for i in 5..=2` | The body runs zero times. |
+| `for i in last - 1..=last` with `last` the largest `u32` | Two iterations, then the loop ends without an overflow error. |
 | `continue` inside a `for` loop | The loop still advances and finishes. |
 | `&&` with a printing call on the right | The call runs only when the left side is `true`. |
 | `let` inside a loop body | Each iteration starts from the initializer again. |
 | A call to a function defined later in the file | Declaration order does not matter. |
 | A function that calls itself | Each call has its own parameters and locals. |
+| Two functions that call each other | Mutual recursion works, and each call has its own frame. |
 | Calls as arguments, each printing | Arguments are evaluated left to right. |
+| `f() + g()` where both print | The left operand runs first. |
 
 ## What you need to have
 
@@ -503,7 +515,7 @@ missing or misplaced jump changes what the program prints.
 - `break`, `continue` and early `return`, each going to the right block.
 - Short-circuit `&&` and `||`.
 - Local variables in nested blocks with the right lifetimes.
-- Written decisions for the open `for` loop questions, each with a test.
+- The `for` loop rules of decision 13, each with a test.
 - End-to-end tests of nested loops and nested conditionals that check output.
 
 </div>
@@ -545,7 +557,7 @@ In practice:
   compiles, runs and compares output;
 - every statement form in the statements chapter that changes control flow is
   covered, both alone and nested;
-- the open `for` loop questions have written answers and tests;
+- each `for` loop rule of decision 13 has a test;
 - every test from milestones 0 to 6 still passes, including the program that
   prints `14`.
 
@@ -574,9 +586,11 @@ bookkeeping rather than in the source.
 rather than to each call, the first recursive call will overwrite its caller's
 values. The call stack exists to prevent that.
 
-**Deciding `for` semantics in the code generator.** It is easy to choose, say,
-that the range end is read once, simply because that is how the lowering came
-out. That choice is language behavior. Write it down and test it.
+**Deciding `for` semantics in the code generator.** It is tempting to let the
+lowering decide, say, whether the range end is read once or before every
+iteration, because of how the code happened to come out. That is language
+behavior, and decision 13 has already fixed it: the end is read once. Test
+each rule instead of trusting the lowering.
 
 **Testing only the happy path.** A loop that always runs to completion never
 exercises `break`. A condition that is always true never exercises the false

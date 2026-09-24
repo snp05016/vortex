@@ -14,8 +14,14 @@ the same language more formally:
   compiler's front end (the stages that read and check your program) follows
   that grammar.
 
-When the documents disagree, the formal grammar wins. Please report the
-mismatch so it can be fixed.
+The tour explains the rules; it does not define them. The
+[specification](../specification/index.md) chapters, including the formal
+grammar, are the rules, and
+[Document authority](../specification/conformance.md#11-document-authority)
+says which page decides when two disagree. If the tour and the specification
+disagree, the specification is right
+([why](../decisions/documentation.md#d49)); please report the mismatch so it
+can be fixed.
 
 ## How each chapter is organized
 
@@ -33,6 +39,15 @@ Each chapter follows the same simple pattern:
 
 An invalid example is wrong on purpose. Do not copy one into a program unless
 you are testing the compiler's error messages (its **diagnostics**).
+
+Every example starts with a comment that says what it is and what the compiler
+does with it, such as `// statements: valid` or `// items: type error`.
+`statements` means lines that belong inside a function body, `items` means
+top-level declarations such as functions and structs, and `program` means a
+whole file; `// fragment` marks a piece of syntax shown on its own, which is
+never compiled.
+[Specification examples](../specification/conformance.md#18-specification-examples)
+lists every label ([why](../decisions/documentation.md#d28)).
 
 ## Guided reading order
 
@@ -81,9 +96,9 @@ in each chapter's "Compiler handling" section. The
 | Lexer | Turns source characters into tokens and reports malformed tokens. |
 | Parser | Checks grammatical structure and builds the AST (abstract syntax tree: a tree that records the structure of the program). |
 | Name resolution | Connects each used name to a declaration and checks scope. |
-| Type checking | Checks operand, argument, return, field, index, and assignment types. |
-| Constant evaluation | Evaluates array-dimension expressions and other required compile-time values. |
-| Runtime/code generation | Emits checks and executable behavior for values not known during compilation. |
+| Type checking | Checks operand, argument, return, field, index, and assignment types, and evaluates array dimensions while reading array types ([decision](../decisions/arrays.md#d52)). |
+| Constant evaluation | Checks operations whose deciding values are written with integer literals only, such as `10 / 0`, and rejects those that would fail ([decision](../decisions/diagnostics.md#d39)). |
+| Runtime/code generation | Emits executable code, including the runtime checks for every other operation. |
 
 ## v0.1 boundary
 

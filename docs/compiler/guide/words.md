@@ -3,7 +3,8 @@
 <p class="page-intro">Every technical word used in the compiler guide, in alphabetical order, explained in plain language. Each stage page explains its own words too; this page puts them all in one place.</p>
 
 For the exact meaning of words that describe the Vortex language itself, the
-[specification glossary](../../specification/glossary.md) is the authority.
+[specification glossary](../../specification/glossary.md) is the
+[authority](../../specification/conformance.md#11-document-authority).
 The definitions here are written for understanding, not for settling
 arguments.
 
@@ -48,6 +49,9 @@ basic block
 block
 : A pair of braces with statements inside; in Vortex every block creates a new scope.
 
+borrow
+: The stretch of a program during which a reference made with `&` or `&mut` is live; in Vortex a `let` borrow lasts to the end of its block and an argument borrow lasts for the call.
+
 boundary case
 : The value at the edge: the last one that works and the first one that fails.
 
@@ -82,13 +86,13 @@ cascade
 : A burst of false errors caused by one real mistake.
 
 cast
-: An explicit conversion between numeric types, written like a call, such as `f32(count)`.
+: An explicit conversion to a numeric type, written as the type's keyword followed by one value in parentheses, such as `f32(count)`. It looks like a call but is not one.
 
 category
 : The kind of problem a diagnostic reports; the specification lists eight.
 
 character
-: One symbol of text as a person would count it.
+: One Unicode scalar value: in plain terms, one letter, digit, symbol or space as Unicode numbers them. An accented letter typed as a plain letter followed by a separate accent counts as two. See [decision 15](../../decisions/lexical.md#d15).
 
 clean checkout
 : A fresh copy of the project's files with nothing left over from earlier builds.
@@ -106,7 +110,7 @@ comment
 : Text for human readers that the compiler skips; in v0.1 it runs from `//` to the end of the line.
 
 compatible
-: Allowed to be used together under the type rules; in v0.1 this usually means exactly the same type.
+: Allowed to be used together under the type rules; in v0.1 this means exactly the same type, because there are no automatic conversions.
 
 compile time
 : While the compiler is working on the source, before any executable exists.
@@ -115,7 +119,10 @@ compiler
 : A program that translates programs: it reads source code, checks it, and writes out code a machine can run.
 
 constant evaluation
-: Working out an expression's value during compilation, because the language needs that value before the program runs.
+: Working out an expression's value during compilation: every array dimension, and every checked operation whose deciding operands are integer constant expressions.
+
+constant expression
+: In v0.1, an integer constant expression: integer literals combined with `+`, `-`, `*`, `/`, `%` and parentheses, with an optional `-` before a literal; names and calls never count. Array dimensions must be constant expressions.
 
 contiguous
 : Stored side by side with no gaps.
@@ -145,7 +152,7 @@ dot product
 : Multiplying two equal-length lists position by position and adding the results.
 
 driver
-: The program a person runs to use the compiler (`vortex`); it reads the command line, runs the stages in order and reports the outcome.
+: The program a person runs to use the compiler (`vortex`); it reads the command line, runs the stages in order and reports the outcome through its exit status: 0 for success, 1 when the source has errors, 2 for usage and file problems.
 
 duplicate declaration
 : Two declarations of the same name in the same scope.
@@ -184,7 +191,7 @@ executable
 : A file of machine code that the operating system can start as a program.
 
 exit status
-: A small number a program hands back when it finishes; by convention zero means success.
+: A small number a program hands back when it finishes; by convention zero means success. A compiled Vortex program exits with 0 when `main` returns and with 101 after a runtime error.
 
 expected failure
 : A test that is known to fail and is marked that way on purpose, usually because it covers a known limitation.
@@ -259,7 +266,7 @@ lifetime
 : How long a variable exists while the program runs, as opposed to where its name is visible.
 
 line and column
-: A position a person can find: which row of the file, and how far along it.
+: A position a person can find: which row of the file, and how far along it. Both count from 1; the column counts characters, and a tab counts as one.
 
 linker
 : A tool that joins separately compiled pieces of machine code, such as your program and a runtime library, into one executable.
@@ -283,7 +290,7 @@ loop nest
 : Loops placed inside other loops.
 
 loop variable
-: The variable a for loop introduces, visible only inside its body.
+: The variable a `for` loop introduces. It takes the integer type of the range's ends, cannot be assigned, and is visible only inside the loop body.
 
 lowering
 : Rewriting a program in a simpler, more machine-like form, for example turning a syntax tree into a list of small ordered steps.
@@ -304,7 +311,7 @@ memory
 : The large, numbered storage area a running program reads and writes.
 
 mutable, immutable
-: Allowed, or not allowed, to change after creation; a Vortex variable is mutable only when declared with `mut`.
+: Allowed, or not allowed, to change after creation; in Vortex a place is mutable only when its root variable is declared with `let mut` or is a `&mut` reference, and parameters are immutable.
 
 naive
 : Written in the most direct way, with no attempt to make it fast.
@@ -319,7 +326,7 @@ name resolution
 : The stage that links each use of a name to its declaration and reports unknown, duplicate and out-of-scope names.
 
 namespace
-: A separate set of names, such as a struct's field names, that do not clash with other names.
+: A separate set of names. In Vortex, all functions, structs and `print` share one namespace, while each struct's field names form their own and do not clash with other names.
 
 NaN
 : "Not a number", a special floating-point value produced by operations such as `0.0 / 0.0`.
@@ -343,13 +350,13 @@ object file
 : Machine code that is not yet a complete program and may refer to code that lives elsewhere, such as `print`.
 
 offset
-: A position counted from the start of the file.
+: A position given as the number of bytes before it in the file.
 
 padding
 : Unused bytes placed between or after the parts of a value so that each part meets its alignment rule.
 
 parameter
-: A named, typed input in a function's declaration.
+: A named, typed input in a function's declaration; in Vortex it cannot be assigned, though a `&mut` parameter can write the storage it refers to.
 
 parse tree (concrete syntax tree)
 : A tree with a node for every grammar rule the parser used, including punctuation.
@@ -362,6 +369,9 @@ pass
 
 phi
 : In SSA form, a marker at the point where paths meet that picks which version of a value to use.
+
+place
+: A name followed by any index and field suffixes, such as `points[i].x`: something an assignment can target or `&` can borrow.
 
 Pratt parsing
 : A well-known technique for parsing expressions with many precedence levels, named after Vaughan Pratt.
@@ -402,6 +412,9 @@ release
 release gate
 : The list of checks that must all pass before a release may be named.
 
+reserved word
+: A word kept back for a future version of the language, such as `i64` or `const`, that cannot be used as a name. See [decision 29](../../decisions/lexical.md#d29).
+
 return value
 : The value a function hands back to its caller.
 
@@ -412,7 +425,7 @@ row, column
 : One horizontal line of a matrix, and one vertical line.
 
 row-major order
-: Storing a two-dimensional array one whole row after another.
+: Storing a two-dimensional array one whole row after another; every Vortex array uses this order.
 
 rule (production)
 : One entry in the grammar describing the shape of one construct.
@@ -439,7 +452,7 @@ scope
 : The region of source text where a declaration's name can be used.
 
 shadowing
-: Declaring a name in an inner scope that an outer scope already declares, so the inner one takes over inside; not yet decided for Vortex.
+: Declaring a name in an inner scope that an outer scope already declares, so the inner one would take over inside; Vortex forbids it, and such a declaration is a name error.
 
 shape
 : The list of an array's sizes, one per dimension.
@@ -460,7 +473,7 @@ source manager
 : The part of the compiler that holds the source text and turns positions into locations, without interpreting any syntax.
 
 source span
-: The start and length of the source text a token or node came from.
+: The start and length, in bytes, of the source text a token or node came from.
 
 spelling (lexeme)
 : The exact characters a token was made from.
@@ -468,8 +481,14 @@ spelling (lexeme)
 square matrix
 : A matrix with as many rows as columns.
 
+stack exhaustion
+: Running out of the memory set aside for the call stack, usually through deep recursion; a Vortex program must then stop with a report.
+
 stack frame
 : One call's entry on the call stack, holding its parameters, its local variables and where to return to.
+
+standard error
+: A second text stream, kept apart from standard output, for error messages; the compiler writes its diagnostics there, and a compiled program writes its runtime error line there.
 
 standard output
 : The text stream a program writes to by default, which tests can capture.
@@ -494,6 +513,9 @@ syntax error
 
 target
 : The kind of machine and operating system the generated program is meant to run on.
+
+terminating statement
+: A statement after which a function cannot carry on to the next statement: a `return`, a block whose last statement terminates, or an `if` with an `else` whose branches both terminate. A loop never terminates.
 
 test
 : One small automatic check with a pass or fail answer.
@@ -560,6 +582,9 @@ vertical slice
 
 visible
 : A declaration is visible at a point if its name can be used there.
+
+warning
+: A diagnostic that points out a likely mistake without rejecting the program; Vortex never requires one, and it never changes the result of compiling.
 
 well-formed, ill-formed
 : Following every required rule, or breaking at least one; ill-formed programs must be rejected.

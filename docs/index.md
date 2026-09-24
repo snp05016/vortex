@@ -14,6 +14,7 @@ each value is used correctly before the program ever runs.
 ## One complete example
 
 ```vortex
+// program: valid
 struct Point {
     x: f32,
     y: f32,
@@ -52,7 +53,7 @@ This program shows most of what a Vortex file contains:
   </div>
   <div class="document-link">
     <a href="specification/">Language specification</a>
-    <span>The exact rules for syntax, types, behavior, and error messages. These rules are normative: a compiler must follow them to count as a correct Vortex compiler.</span>
+    <span>The exact rules for syntax, types, behavior, and the errors a compiler must report. These rules are normative: a compiler must follow them to count as a correct Vortex compiler.</span>
   </div>
   <div class="document-link">
     <a href="compiler/guide/">Building the compiler</a>
@@ -77,10 +78,10 @@ This program shows most of what a Vortex file contains:
   <li><span class="chapter-number">04</span><a href="specification/types-and-values/">Types and values</a><span>Primitive types, compound types, values, conversions, and type equivalence.</span></li>
   <li><span class="chapter-number">05</span><a href="specification/expressions/">Expressions</a><span>Operators, calls, casts, indexing, field access, evaluation, and precedence.</span></li>
   <li><span class="chapter-number">06</span><a href="specification/statements/">Statements and control flow</a><span>Bindings, assignment, return, blocks, branches, and loops.</span></li>
-  <li><span class="chapter-number">07</span><a href="specification/arrays/">Arrays and shapes</a><span>Fixed-size array types, construction, indexing, assignment, and nested arrays.</span></li>
-  <li><span class="chapter-number">08</span><a href="specification/structs/">Structs</a><span>Struct declarations, values, fields, nested structs, and array-valued fields.</span></li>
+  <li><span class="chapter-number">07</span><a href="specification/arrays/">Arrays and shapes</a><span>Fixed-size array types, constant dimensions, construction, indexing, assignment, nested arrays, and memory layout.</span></li>
+  <li><span class="chapter-number">08</span><a href="specification/structs/">Structs</a><span>Struct declarations, construction, field access and assignment, value semantics, and layout.</span></li>
   <li><span class="chapter-number">09</span><a href="specification/references/">References and mutability</a><span>Borrowed access, mutation permissions, assignment targets, and lifetime boundaries.</span></li>
-  <li><span class="chapter-number">10</span><a href="specification/diagnostics/">Diagnostics</a><span>Required errors, implementation limits, warnings, and source reporting.</span></li>
+  <li><span class="chapter-number">10</span><a href="specification/diagnostics/">Diagnostics</a><span>Error categories, what each diagnostic must contain, recovery, runtime error reporting, and optional warnings.</span></li>
   <li><span class="chapter-number">11</span><a href="specification/grammar/">Formal grammar</a><span>The parser-facing grammar and its relationship to semantic requirements.</span></li>
   <li><span class="chapter-number">12</span><a href="specification/glossary/">Glossary</a><span>Definitions of the terms used throughout the specification.</span></li>
 </ol>
@@ -93,7 +94,7 @@ This program shows most of what a Vortex file contains:
 | Primitive types | `void`, `bool`, `char`, `i32`, `u32`, `usize`, `f32`, `f64`, and `String` |
 | Compound types | Fixed-size arrays, user-defined structs, and basic references |
 | Values | Literals, names, array values, repeat arrays, and struct values |
-| Expressions | Unary, binary, range, call or cast, index, field access, and grouping |
+| Expressions | Unary, binary, range (only as a `for` loop's iterable), call, cast, index, field access, and grouping |
 | Statements | Local declarations, assignment, return, expression statements, blocks, conditionals, and loops |
 | Safety model | Explicit mutation, name and type checks, fixed-shape validation, and documented runtime checks |
 
@@ -115,6 +116,9 @@ Language tour
 
 Compiler guide and internals
     explain how a compiler can implement and test those rules
+
+Decision records
+    explain why each rule was chosen
 ```
 
 A few words in that picture may be new. A **token** is one word or symbol of
@@ -123,10 +127,12 @@ compiler that checks whether tokens are arranged in a valid structure. Every
 other term used on this site is defined in the
 [glossary](specification/glossary.md).
 
-When two documents disagree about v0.1 syntax, the
-[formal grammar](specification/grammar.md) is authoritative. When the grammar
-accepts a form whose meaning is constrained later, the relevant specification
-chapter defines the semantic rule.
+The specification chapters, including the
+[formal grammar](specification/grammar.md), are normative: they are the rules.
+Every other page explains them. When two pages disagree,
+[Document authority](specification/conformance.md#11-document-authority)
+decides which is right; please report the mismatch. The reasons are in
+[record 49](decisions/documentation.md#d49).
 
 ## Design direction
 

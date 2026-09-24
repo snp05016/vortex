@@ -208,6 +208,7 @@ example, but every construct in it was checked against the
 specification and the language tour.
 
 ```vortex
+// program: valid
 fn multiply(a: &[f32; 2, 3], b: &[f32; 3, 2], c: &mut [f32; 2, 2]) {
     for row in 0..2 {
         for column in 0..2 {
@@ -254,16 +255,18 @@ output, and nothing else. The loops are the three-deep **loop nest** from
 Figure 1: pick a row, pick a column, then walk `k` along the shared inner
 dimension. `sum` is a local `f32` that starts at `0.0` and collects one dot
 product. The arrays in `main` start as repeat arrays filled with `0.0` and are
-then set element by element, which avoids a question the documents have not
-settled (see [Traps](#traps)).
+then set element by element, which exercises indexed stores; a nested literal
+with the written type would also work (see [Traps](#traps)).
 
 Every part of this program exercises something from an earlier stage. The
-indexing `a[row, k]` needs the layout from
+indexing `a[row, k]` needs the row-major layout from
 [stage 8](stage-8-data-in-memory.md) and a bounds check from
 [stage 9](stage-9-runtime-safety.md), or a proof that `row` and `k` stay in
 range. The call passes references with no copying. `+=` on `f32` needs no
 overflow check, because the required overflow checks are for integers, but it
-must not be regrouped or reordered.
+must not be regrouped or reordered, and `sum += a[row, k] * b[k, column]` must
+round the product and then the sum: the back end must not fuse them into one
+fused multiply-add ([decision](../../decisions/numbers.md#d56)).
 
 ### One function per shape
 
@@ -284,6 +287,7 @@ compilation. With shapes in the types, most of this comes free from
 matrix whose inner dimension does not match:
 
 ```vortex
+// fragment
 let mut wrong = [0.0; 2, 2];
 multiply(&a, &wrong, &mut c);
 // type error: multiply expects &[f32; 3, 2] for b, not &[f32; 2, 2]
@@ -334,17 +338,21 @@ Other shape mistakes the front end should catch in this program:
 - indexing with the wrong number of indices, such as `a[row]` on a rank-2
   array, because the number of indices must match the rank;
 - a constant index past the edge, such as `a[2, 0]` on a 2 by 3 array, which
-  can be proven out of bounds;
+  is a constant-evaluation error because the index and the extent are both
+  constants;
 - a result array of the wrong shape passed as `c`;
 - passing `&c` where `&mut c` is required, or `&mut a` where `a` was declared
   without `mut`.
 
-One mistake it may not catch at compile time is a loop bound that disagrees
-with the array, such as `for k in 0..4` over an array with 3 columns. A
-compiler that can prove the bad access will reject it. One that cannot will
-keep the bounds check from stage 9, and the program will stop with a runtime
-error the first time `k` reaches 3. Either outcome is correct. A wrong answer
-is not.
+One mistake the compiler must not reject is a loop bound that disagrees with
+the array, such as `for k in 0..4` over an array with 3 columns. `k` is a loop
+variable, not a constant expression, so the program compiles and keeps the
+bounds check from [stage 9](stage-9-runtime-safety.md); it stops with a
+runtime error the first time `k` reaches 3. A compiler may warn about the
+loop, but only a constant index is checked while compiling
+([decision 12](../../decisions/arrays.md#d12),
+[record 39](../../decisions/diagnostics.md#d39)). A wrong answer is never
+acceptable.
 
 ## Comparing with a known answer
 
@@ -361,6 +369,11 @@ anywhere. In general, floating-point results are rounded at every step, as
 the tour warns: they "are not exact decimal arithmetic". For inputs such as
 `0.1` or `1.0 / 3.0`, two correct programs can produce results that differ in
 their last bits, and an exact comparison would call one of them wrong.
+Within Vortex this cannot happen for one program: every operation rounds
+once, in a fixed order, so the same program gives the same bits with every
+conforming compiler. The difference appears between different calculations,
+such as a Vortex result and a known answer computed in another order or by
+another tool.
 
 The usual answer is a **tolerance**: accept a result if it is within some
 small distance of the expected value. In v0.1 you can write that with
@@ -371,11 +384,12 @@ the place to learn how to reason about it.[^goldberg] For the milestone
 itself, the simplest honest plan is to choose inputs whose products are exact,
 compare exactly, and add one test with non-exact inputs and a tolerance.
 
-The tour also promises that the v0.1 compiler "does not reorder
-floating-point operations in a way that changes their result". That promise
-is what makes the known answer stable. If your compiler regrouped the sum
-inside the `k` loop, the program might still be "roughly right" and yet print
-a different last digit on a different day.
+The [types chapter](../../specification/types-and-values.md#44-floating-point-values)
+makes that fixed order a rule: no reordering, no fused multiply-add and no
+extra precision. That rule is what makes the known answer stable. If your compiler
+regrouped the sum inside the `k` loop, or fused each multiplication with its
+addition, the program might still be "roughly right" and yet print a different
+last digit on a different machine.
 
 ## Why speed can wait
 
@@ -454,17 +468,16 @@ the CPU without optimization". The evidence for that:
 - A version with non-exact inputs passes when compared with a tolerance.
 - Passing an input of the wrong shape, or an output of the wrong shape, is
   rejected at compile time with a type error that points at the argument.
-- A loop bound larger than the array's dimension either is rejected at compile
-  time or stops at run time with a bounds error, never producing a wrong
-  answer.
+- A loop bound larger than the array's dimension compiles and stops at run
+  time with a bounds error, never producing a wrong answer.
 - All earlier milestone tests still pass.
 
 ## Traps
 
 **Testing only square matrices.** A 2 by 2 multiply can pass while row and
 column are swapped somewhere, because the shapes line up either way. The
-rectangular test is the one that catches it. The same applies to the layout
-choice from stage 8.
+rectangular test is the one that catches it. The same applies to the
+row-major offsets from stage 8 ([decision](../../decisions/arrays.md#d43)).
 
 **Choosing inputs that hide mistakes.** If every input is 1.0, many wrong
 programs print the right answer. Use distinct values in every cell, as in
@@ -479,12 +492,12 @@ whole-number example and fails, sometimes, for everything else. Know which
 of your tests are exact and why.
 
 **Filling arrays with nested list literals.** The
-[tour](../../language-tour/04-variables-and-types.md) shows a
-`[f32; 2, 2]` initialized from a list of two lists. The
-[specification](../../specification/types-and-values.md#411-type-equality)
-treats a nested array type as a different, rank-1 type. Until the documents
-agree on whether a nested literal can initialize a rank-2 array, the
-repeat-then-assign style used above avoids the question.
+[tour](../../language-tour/04-variables-and-types.md) initializes a
+`[f32; 2, 2]` from a list of two lists. That works because the written type
+shapes the literal: each inner list is checked as one row
+([decision](../../decisions/arrays.md#d21)). Without the annotation, the same
+literal has the nested type `[[f32; 2]; 2]`, which does not convert. Keep the
+annotation whenever you use a nested literal.
 
 **Letting the compiler recognize the pattern.** It may be tempting to spot
 three nested loops and swap in something clever. The milestone says ordinary
@@ -496,7 +509,7 @@ in the parts of the compiler this program is meant to test.
 **Kaleidoscope.** The LLVM tutorial generates plain, unoptimized code in
 chapter 3 and only adds optimization passes in chapter 4, once code generation
 works.[^kal4] Even then it presents each pass as a choice: LLVM "allows a
-compiler implementor to make complete decisions" about which optimizations to
+compiler implementer to make complete decisions" about which optimizations to
 use and in what order.[^kal4] Vortex takes the same order, but further apart:
 optimization waits not for the next chapter but for the next release.
 

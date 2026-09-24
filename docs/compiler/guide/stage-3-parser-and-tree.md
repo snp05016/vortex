@@ -144,6 +144,7 @@ This is the most important boundary on the page. The
 plainly: "The parser checks form." It uses this line as its example:
 
 ```vortex
+// fragment
 let value: MissingType = unknown_name + true;
 ```
 
@@ -156,6 +157,7 @@ checking will report them.
 Compare this line, which the parser must reject:
 
 ```vortex
+// statements: syntax error
 let value i32 = 10; // invalid: the ':' before the type is missing
 ```
 
@@ -176,13 +178,16 @@ And it must leave these alone:
 - whether `value + other` makes sense for their types (type checking);
 - whether an assignment target is mutable, whether `break;` is inside a loop,
   whether `main` has the right signature (semantic checks);
-- whether an array dimension is a compile-time integer (constant evaluation).
+- whether an array dimension is an integer constant expression (stage 5,
+  while it resolves array types).
 
 The last one surprises people. `[f32; rows, 8]` is a valid shape, so the
-parser accepts it, even though `rows` may turn out to be a runtime value that
-v0.1 forbids there. The grammar is explicit that dimensions are full
-expressions and that the parser "must not reduce dimensions to integer
-tokens". Deciding what a dimension is worth happens later.
+parser accepts it, even though stage 5 always rejects it: a v0.1 dimension may
+contain only integer literals and arithmetic, so any name there is a
+constant-evaluation error ([decision](../../decisions/arrays.md#d11)). The
+grammar is explicit that dimensions are full expressions and that the parser
+"must not reduce dimensions to integer tokens". Deciding what a dimension is
+worth happens later.
 
 ## Parse trees and syntax trees
 
@@ -291,7 +296,7 @@ From loosest to tightest, the ones you meet most are:
 | 1 | `..` `..=` (range) | does not chain |
 | 2, 3 | `\|\|`, then `&&` | left |
 | 4 to 6 | `\|`, `^`, `&` (bitwise) | left |
-| 7, 8 | `==` `!=`, then `<` `<=` `>` `>=` | left |
+| 7, 8 | `==` `!=`, then `<` `<=` `>` `>=` | does not chain |
 | 9 | `<<` `>>` | left |
 | 10 | `+` `-` | left |
 | 11 | `*` `/` `%` | left |
@@ -426,12 +431,17 @@ A few Vortex levels need extra care:
 - **Prefix operators group to the right.** `- -value` means `-(-value)`. The
   operator nearest the operand applies first.
 - **Ranges do not chain.** `start..middle..finish` is a syntax error, not a
-  range of ranges. The grammar allows at most one range operator.
-- **Comparisons chain by grammar, but not by meaning.** The grammar lets
-  `a < b < c` parse as `(a < b) < c`, the same left-folding shape as `+`. It
-  does not mean "b is between a and c". Type checking rejects it later,
-  because `a < b` is a `bool` and a `bool` cannot be compared with `<`. The
-  parser's only job is to build the left-grouped shape.
+  range of ranges. The grammar allows at most one range operator. A range also
+  parses anywhere an expression can, as in `let span = 0..10;`. Build the tree
+  as usual: [stage 5](stage-5-types-and-rules.md) rejects it with a type
+  error, because v0.1 allows a range only as the iterable of a `for` loop
+  ([decision 36](../../decisions/statements.md#d36)).
+- **Comparisons do not chain.** `a < b < c` is a syntax error, and so are
+  `a == b == c` and `a < b == c`: an operand of a comparison or equality
+  operator cannot itself be one unless it is in parentheses
+  ([decision](../../decisions/operators.md#d37)). After one comparison, a
+  second comparison operator is reported as a syntax error, not folded in.
+  `(a < b) == c` parses.
 - **`&` means two things.** In front of an operand it takes a reference; between
   two operands it is bitwise AND. Its position in the expression tells them
   apart, and the tree must record which one it was.
@@ -481,17 +491,17 @@ them apart from the tokens alone.
   after the first item (`,` or `]` versus `;`) tells the two value forms
   apart. The type form only appears where the grammar expects a type.
 - **A struct value or a block?** In `if ready { print(1); }` the name
-  `ready` is followed by `{`, just as `Point` is in `Point { x: 1.0 }`. The
-  grammar says a name followed by `{` begins a struct expression "only when
-  its contents have `field: value` form". Conditions of `if`, `while` and
-  `for` are exactly where this matters.
-- **Casts.** `f32(count)` is written like a call, and the [types
-  chapter](../../specification/types-and-values.md#412-casts-and-conversions)
-  says the parser records it as ordinary call syntax. But `f32` is a keyword,
-  not an identifier, and the grammar's list of primary expressions does not
-  include type keywords. The documents do not yet say how this fits. The
-  decision must settle whether a primitive type name may start an
-  expression, and whether it may do so only when a `(` follows.
+  `ready` is followed by `{`, just as `Point` is in
+  `Point { x: 1.0, y: 2.0 }`. The grammar says a name followed by `{` begins a
+  struct expression "only when its contents have `field: value` form".
+  Conditions of `if`, `while` and `for` are exactly where this matters.
+- **Casts.** `f32(count)` looks like a call, but `f32` is a keyword. The
+  [grammar](../../specification/grammar.md#expressions-and-precedence) gives
+  casts their own production: one of the five numeric type keywords, then
+  `(`, one expression and `)` ([decision](../../decisions/numbers.md#d1)). A
+  type keyword may begin an expression only in this form, so the parser knows
+  it has a cast from the first token and builds a cast node, not a call.
+  `bool(flag)`, a bare `f32`, and `f32(a, b)` are syntax errors.
 
 ## When the source is wrong
 
@@ -571,6 +581,13 @@ errors, and the diagnostics chapter allows a compiler to stop after a
 documented maximum number of errors. Aim for recovery that is right in the
 common cases and quiet when it is unsure.
 
+Line 2 of Figure 4 shows the case where recovery can help. The parser read the
+name `width` before the error, so it can still record the declaration, marked
+as broken and already reported. That is the suggested default,
+[implementation choice I11](../../decisions/implementation.md#i11): later
+stages then report nothing about `width`, so `print(width)` on line 5 draws no
+false error.
+
 Two properties matter more than cleverness. The parser must always move
 forward, so recovery can never loop on the same token. And it must respect
 nesting: the [design notes](../parser-design.md#14-diagnostics-and-recovery)
@@ -604,20 +621,29 @@ preserve. In plain words:
 
 The parser also keeps things it does not understand yet. Array dimensions
 stay as expressions. Names stay as spellings. A named type like `Point` or
-`u64` stays a name, even though `u64` is not a Vortex type; the grammar
-notes that it "parses as a named type, then fails name resolution".
+`Grid` stays a name, even when the program declares no struct called `Grid`;
+[stage 4](stage-4-names-and-scopes.md) reports that. A planned type name such
+as `u64` never gets this far: it is reserved for a future version, and the
+lexer rejects it ([decision 29](../../decisions/lexical.md#d29)).
 
 ## Printing the tree
 
 The roadmap's finish line for this milestone is a printed tree: "the
 compiler can print a stable syntax tree for every v0.1 language construct".
 Printing is how you look at what the parser built, and how tests check it.
+The driver's `--ast` option prints the tree to standard output and stops after
+parsing, without writing an executable
+([decision](../../decisions/program.md#d20)).
 
 Nystrom builds a small printer early for exactly this reason: when debugging
 a parser, it helps to see whether the tree has the structure you
 expected.[^ci-repr] A printed tree should show every node's kind, the
 details it stores (the operator, the name, whether `mut` was written), its
-children in order, and ideally its source position.
+children in order, and ideally its source position. The suggested default,
+[implementation choice I5](../../decisions/implementation.md#i5), is an
+indented S-expression: each node in parentheses on its own line, starting
+with its kind, then what it stores and `@line:column`, with each child
+indented two more spaces.
 
 "Stable" means the same input always prints the same text. That rules out
 anything that changes between runs, such as memory addresses, and anything
@@ -648,11 +674,13 @@ the first one an addition.
   `continue`: all control flow.
 - Every precedence level and associativity from the expressions chapter:
   a wrong shape means a wrong answer.
-- Calls (including cast-shaped calls), multidimensional indexing, field
-  access, chained in source order.
+- Calls, casts, multidimensional indexing and field access, chained in
+  source order.
 - List arrays, repeat arrays and array types, with dimensions kept as
   expressions.
-- Struct declarations and struct expressions; shared and mutable references.
+- Struct declarations with at least one field (`struct Marker {}` is a syntax
+  error, [decision](../../decisions/operators.md#d26)) and struct expressions;
+  shared and mutable references.
 - Syntax errors that name what was expected, what was found, and where.
 - Recovery at `;`, `}`, `fn` and `struct` that always makes progress.
 - A stable tree printer.
@@ -665,15 +693,21 @@ the first one an addition.
 
 - Checking that names exist: stage 4.
 - Types of any kind, including the default `i32` for bare integers: stage 5.
-- Mutability, `break` outside a loop, the shape of `main`: stage 5.
-- Working out array dimensions: stage 5 (constant evaluation).
-- The zero-length-array policy: a stage 5 decision; the parser must not
-  make it.
-- Constant folding such as turning `2 + 2` into `4`: not in v0.1 at all.
+- Mutability and `break` outside a loop: stage 5.
+- The `main` check: [stage 4](stage-4-names-and-scopes.md#exactly-one-main)
+  ([decision](../../decisions/program.md#d6)).
+- Working out array dimensions: stage 5, while the type checker resolves
+  array types ([decision](../../decisions/arrays.md#d52)).
+- Rejecting a zero extent: stage 5 reports it as a constant-evaluation error
+  ([decision](../../decisions/arrays.md#d10)); the parser accepts `[f32; 0]`.
+- Constant folding such as turning `2 + 2` into `4`: never in the parser.
+  Stage 5 works out array dimensions and constant checks, and the tree keeps
+  what was written.
 - Error nodes for editors and a parser that never gives up: useful for an
   editor, not needed for v0.1.
-- Parsing modules, generics, methods or anything outside v0.1: reject them
-  as syntax errors.
+- Parsing modules, generics, methods or anything outside v0.1: reject them,
+  mostly as syntax errors (a reserved word such as `const` is already a
+  lexical error).
 
 </div>
 </div>
@@ -693,17 +727,22 @@ an integer literal, and do not execute or fold expressions while parsing.
 "when the compiler can print a stable syntax tree for every v0.1 language
 construct". Put more concretely, you are done when:
 
-- every valid example in the [grammar](../../specification/grammar.md) and
-  the [language tour](../../language-tour/README.md) parses and prints a tree
-  whose shape you have checked by hand at least once;
+- every example in the [grammar](../../specification/grammar.md) and the
+  [language tour](../../language-tour/README.md) whose
+  [label](../../specification/conformance.md#18-specification-examples) is not
+  `lexical error`, `syntax error`, `planned` or `fragment` parses, once
+  completed as its kind says, and prints a tree whose shape you have checked
+  by hand at least once ([decision 28](../../decisions/documentation.md#d28));
 - `2 + 3 * 4` prints with `+` at the root and `*` as its right child, and
   `a - b - c` prints with the first `-` lower than the second;
-- every example marked "not allowed" as syntax in the grammar is rejected,
-  with an error that points at the right token;
+- every example in the grammar labelled `lexical error` or `syntax error` is
+  rejected, with an error that points at the right token;
+- `a < b < c` and `a == b == c` are rejected as syntax errors, while
+  `(a < b) == c` parses;
 - a file with two unrelated syntax errors reports both, and no false third
   one;
-- `let value: MissingType = unknown_name + true;` is accepted, because its
-  problems are not the parser's to report;
+- `let value: MissingType = unknown_name + true;`, written inside `main`, is
+  accepted, because its problems are not the parser's to report;
 - all the lexer tests from [stage 2](stage-2-lexer.md) still pass.
 
 The roadmap's general evidence list applies too: the AST output is "stable

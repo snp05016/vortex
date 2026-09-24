@@ -57,6 +57,10 @@ keyword
 : A word the language reserves for itself, such as `let`, `fn` or `while`. A
   keyword cannot be used as a name.
 
+reserved word
+: A word kept back for a future version of the language, such as `i64` or
+  `const`. It has no meaning yet and cannot be used as a name.
+
 identifier
 : A name the programmer chose, such as `total` or `item_count`.
 
@@ -207,23 +211,29 @@ leave nothing behind.
 </figure>
 
 Two details in that figure matter for everything later. The first is that the
-integer token keeps the spelling `0b101`, not just the value 5. The
+integer token keeps the spelling `0b101` as well as the value 5. The
 [lexical structure chapter](../../specification/lexical-structure.md#28-token-source-data)
 says each token "preserves its kind, original spelling, and source span", and
 that later stages "must not need to reconstruct spelling from the token kind".
 An error message about this literal should be able to quote it as written.
 
-The second is the span. Every token knows where it starts and how long it is.
+The second is the span. Every token knows where it starts and how long it is,
+both counted in bytes
+([Conformance 1.7](../../specification/conformance.md#17-source-locations)).
 When the parser later finds a problem with `total`, it will point at columns 5
 to 9 using nothing but the token's span. If the lexer gets a span wrong by one,
 every error message in the compiler inherits the mistake.
 
 The roadmap's completion condition follows directly: a Vortex file "can be
 printed as a correct token stream with accurate source locations". So the
-driver needs a way to print the tokens it found, one per line, with kind,
-spelling and position. That printout is how you, and your tests, check the
-lexer. Its exact format is your decision. Keep it plain and stable, because
-many expected-output files will depend on it.
+driver has a `--tokens` option that prints the tokens it found to standard
+output, one per line, with kind, spelling and position, and then stops
+([decision](../../decisions/program.md#d20)). That printout is how you, and
+your tests, check the lexer. Its exact format is your decision. Keep it plain
+and stable, because many expected-output files will depend on it. The
+suggested default, [implementation choice I4](../../decisions/implementation.md#i4),
+prints one token per line as `<line>:<column> <KIND> '<spelling>'`, ending
+with the end-of-file token.
 
 ## The kinds of token Vortex has
 
@@ -248,7 +258,8 @@ The table below is a summary. The chapter itself is the rule.
 An identifier starts with an ASCII letter or an underscore, and continues with
 letters, digits and underscores. That shape also fits every keyword. So the
 lexer has to tell them apart: a word shaped like an identifier is a keyword if
-its spelling is exactly one of the reserved words, and an identifier otherwise.
+its spelling is exactly one of the keywords, a lexical error if it is one of
+the reserved words described below, and an identifier otherwise.
 
 "Exactly" includes upper and lower case. The specification says "`String` is a
 keyword, while `string` is an identifier". Many other languages spell their
@@ -256,33 +267,54 @@ string type in lower case, which makes this an easy one to get wrong.
 
 | Spelling | Token kind | Why |
 | --- | --- | --- |
-| `String` | keyword | it is on the reserved list |
+| `String` | keyword | it is on the keyword list |
 | `string` | identifier | case matters, and `string` is not on the list |
-| `Let` | identifier | only `let` is reserved |
+| `Let` | identifier | only `let` is a keyword |
 | `print` | identifier | `print` is a built-in function, not a keyword |
 | `main` | identifier | `main` is special to later stages, not to the lexer |
-| `true` | boolean literal | reserved, and also a literal |
+| `u64` | none: a lexical error | reserved for a future version |
+| `true` | keyword or boolean literal | a keyword that denotes a `bool` value; either kind conforms |
 
-The last row hides a small open decision. The specification lists `true` and
-`false` among the reserved spellings and also as the two boolean literals.
-Whether your token printout calls them keywords or boolean literals is up to
-you. What matters is that they can never be identifiers and that the parser
-can treat them as values.
+The last row has two correct answers. The specification makes `true` and
+`false` keywords that denote the two boolean values, and
+[decision 18](../../decisions/lexical.md#d18) lets the lexer give them either
+a keyword kind or a boolean-literal kind. Pick one for your token printout.
+What matters is that they can never be identifiers and that the parser can
+treat them as values.
 
 The type names `i32`, `f32`, `usize` and the rest are keywords too. The lexer
 does not need to know they are types. It only needs to recognize their
 spelling.
 
+A second, shorter list holds words reserved for a future version: `i8`, `i16`,
+`i64`, `u8`, `u16`, `u64`, `f16`, `bf16` and `const`
+([decision 29](../../decisions/lexical.md#d29)). They have no meaning in v0.1.
+When a word's whole spelling is on this list, the lexer reports a lexical
+error, "reserved for a future version", instead of producing an identifier.
+`u64_count` is still an identifier.
+
 ### Numbers
 
-An integer literal is either one or more decimal digits, or `0b` followed by
-one or more binary digits. So `42` and `0b101010` are both integer literals,
-and `0b101010` has the value 42. Hexadecimal, octal, digit separators such as
-`1_000`, and type suffixes such as `42u32` are not part of v0.1.
+An integer literal is either `0`, or a digit from 1 to 9 followed by more
+digits, or `0b` followed by one or more binary digits. So `42` and `0b101010`
+are both integer literals, and `0b101010` has the value 42. Hexadecimal, octal,
+digit separators such as `1_000`, and type suffixes such as `42u32` are not
+part of v0.1. A leading zero is not allowed: `010` is an error, not ten, and
+not the octal eight that C would read. The prefix must be a lowercase `0b`
+([decision 17](../../decisions/lexical.md#d17)).
 
 A floating-point literal needs digits on both sides of the dot, and may end with
 an exponent: `e` or `E`, an optional sign, and digits. So `3.14`, `1.0e-4` and
-`6.02E+23` are valid, and `.5` and `5.` are not.
+`6.02E+23` are valid. `1e5` and `5.` are not: an exponent needs a decimal point
+before it, and a dot needs digits after it. `.5` is a different case: it is the
+token `.` followed by `5`, and the parser rejects it.
+
+The lexer reads a number as a run of characters before it checks it. The run
+starts at a digit and takes every following letter, digit and `_`, every `.`
+that is not followed by a second `.`, and a `+` or `-` right after `e` or `E`.
+If the whole run is not exactly one literal, it is one malformed numeric
+literal. So `2values`, `0xff`, `0b102` and `1.0e` each give one error covering
+the whole run, not a number followed by leftovers.
 
 A leading minus sign is never part of a number. In `-42` the lexer produces an
 operator token `-` and then an integer literal `42`, and the parser later
@@ -292,14 +324,20 @@ builds a negation from them. The
 The lexer also does not check whether a number is too big. A literal like
 `3000000000` is a perfectly good token. Whether it fits the type it ends up
 with is a question for [stage 5](stage-5-types-and-rules.md), because the
-lexer cannot know that type.
+lexer cannot know that type. That holds for any length: even a literal larger
+than the largest 64-bit integer is one token, and stage 5 reports it as a type
+error ([decision](../../decisions/numbers.md#d32)).
 
 ### Characters and strings
 
 A character literal is a single quote, exactly one character or one escape
 sequence, and a closing single quote. `'λ'` is valid: one character, even
 though in UTF-8 it takes two bytes, as [stage 1](stage-1-source-and-diagnostics.md#characters-bytes-and-encoding)
-explained. `'ab'` and `''` are lexical errors.
+explained. `'ab'` and `''` are lexical errors. Here one character means one
+Unicode scalar value ([decision 15](../../decisions/lexical.md#d15)), one
+decoded code point. An accented letter typed as a plain letter followed by a
+separate combining accent is two scalar values, so it does not fit in a
+character literal even though it looks like one letter.
 
 A string literal is a double quote, any number of characters or escape
 sequences, and a closing double quote. Neither kind of literal may contain a
@@ -311,6 +349,7 @@ backslash, such as `\q` or `\r`, is an unsupported escape and a lexical error.
 The tour's examples show them in use:
 
 ```vortex
+// statements: valid
 print("first line\nsecond line");
 let quote: char = '\'';
 let path = "left\\right";
@@ -330,10 +369,17 @@ Spaces, tabs and line breaks separate tokens and are otherwise ignored. A line
 break does not end a statement; only `;` does. This is valid:
 
 ```vortex
+// statements: valid
 let width = 128;
 let area =
     width * width;
 ```
+
+A line break is a line feed, or a carriage return followed by a line feed; the
+pair is one line break. A carriage return on its own is a lexical error
+([Lexical structure 2.1](../../specification/lexical-structure.md#21-whitespace-and-line-boundaries),
+[decision 16](../../decisions/diagnostics.md#d16)). Test one file saved with
+Windows line endings and one with a stray carriage return.
 
 A comment starts with `//` and continues to the end of the line. The only
 subtlety is that `//` inside a string is ordinary text. In the line below, the
@@ -341,10 +387,15 @@ lexer must produce one string token containing `//`, and the comment starts
 only at the second `//`:
 
 ```vortex
+// statements: valid
 let url = "a//b"; // not a comment inside the quotes
 ```
 
 Block comments, written `/* ... */` in many languages, are not part of v0.1.
+The lexer reports `/*` and `*/` outside a comment or literal as lexical errors
+rather than reading them as `/` and `*`. One case to test: in `a *// note` the
+lexer meets `*/` before `//`, so that line is an error, while `a * // note` is
+fine.
 
 ## The longest match
 
@@ -359,16 +410,19 @@ The rule has one case that surprises people. The range in a `for` loop is
 written like this:
 
 ```vortex
+// statements: valid
 for index in 0..=4 {
     print(index);
 }
 ```
 
 The characters after `in` are `0..=4`. A careless lexer might start a
-floating-point number at `0.` and then get confused. But a floating-point
-literal needs a digit after the dot, and the next character is another dot.
-So `0.` is not a valid token at all, and the longest valid token starting at
-`0` is the integer `0`.
+floating-point number at `0.` and then get confused. The number rule prevents
+this: a `.` ends a number when the character after it is another `.`. In
+`0..=4` it is, so the number is `0`, and the longest-match rule then reads
+`..=`. Numbers are the one place where the lexer does not look for the longest
+valid token: it takes the whole run of number characters and then checks it,
+as the section on numbers explains.
 
 <figure class="vx-figure">
 <svg viewBox="0 0 760 300" role="img" aria-labelledby="munch-title munch-desc">
@@ -415,17 +469,23 @@ the end of the roadmap, so a mistake here breaks a lot.
 ## Errors the lexer reports
 
 The [specification](../../specification/lexical-structure.md#27-lexical-errors)
-lists the lexical errors. The lexer must reject:
+gives the complete list of lexical errors
+([decision 19](../../decisions/lexical.md#d19)); anything not on it belongs to
+a later stage. The lexer must reject:
 
-- an unknown character, such as `@` or `#`, or a non-ASCII letter outside a
-  literal;
+- bytes that are not valid UTF-8;
+- an invalid character, meaning one that cannot start any token (such as `@`
+  or `#`), a non-ASCII character outside a comment or literal, a control
+  character other than tab, line feed and carriage return, a carriage return
+  with no line feed after it, or a byte order mark anywhere but the start of
+  the file;
+- `/*` or `*/` outside a comment or literal;
+- a word reserved for a future version, such as `i64` or `const`;
+- a malformed numeric literal, such as `0xff`, `010`, `1e5` or `1.0e`;
 - an unterminated string or character literal;
 - an unsupported escape, such as `\q`;
 - a character literal with the wrong number of characters, such as `'ab'` or
-  `''`;
-- `0b` with no binary digit after it;
-- malformed exponent text in a floating-point literal, such as `1.0e` with no
-  digits.
+  `''`.
 
 Each one is reported with the category "lexical error" and a span covering the
 offending characters, using the format from stage 1. The
@@ -433,39 +493,35 @@ offending characters, using the format from stage 1. The
 the canonical example:
 
 ```vortex
+// statements: lexical error
 let value = "unterminated;
 ```
 
 The required result is a lexical error at the unterminated string.
 
 The same section adds two rules about what happens next. The lexer "must always
-make progress after reporting an invalid character", which means it may not
-report the same character forever or stop dead in the middle of the file. And
+make progress after reporting a lexical error", which means it may not report
+the same character forever or stop dead in the middle of the file. And
 the end of the file is "one stable end token" that does not consume
 characters again and again. Together these mean that one bad character costs
 one error message, and the lexer then carries on.
 
-### Open decisions about where errors belong
+### Where these errors belong {#open-decisions-about-where-errors-belong}
 
-Some invalid spellings could be caught by the lexer or by the parser, and the
-Vortex documents do not say which. The
-[conformance chapter](../../specification/conformance.md#18-specification-examples)
-labels them "Invalid syntax: rejected during lexing or parsing", which allows
-either. Your tests, though, have to expect one category, so the choice has to
-be made. The cases are:
+Some invalid spellings look as if the lexer or the parser could catch them.
+[Decision 17](../../decisions/lexical.md#d17) settles each case, and the
+[lexical structure chapter](../../specification/lexical-structure.md#how-far-a-number-extends)
+states the rules:
 
-- a number followed directly by letters or digits it cannot contain: `2values`,
-  `0xff`, `42u32`, `0b102`, `1_000`. Is this one malformed number (a lexical
-  error) or a valid number followed by an identifier (which the parser then
-  rejects)?
-- `/*`, the start of a block comment. It lexes cleanly as `/` then `*`, and the
-  parser would reject it. A lexer that recognizes it could give a much clearer
-  message.
-- `5.` followed by something other than a digit. Is this a malformed float, or
-  the integer `5` followed by a `.` token?
+- a number followed directly by letters or digits it cannot contain (`2values`,
+  `0xff`, `42u32`, `0b102`, `1_000`) is one malformed numeric literal, a
+  lexical error covering the whole run;
+- `/*` and `*/` are lexical errors ("block comments are not supported");
+- `5.` followed by anything but a digit or a second `.` is a malformed numeric
+  literal, while `.5` lexes as `.` and `5`, and the parser reports a syntax
+  error.
 
-Whatever you decide, write it next to the lexer's tests. The one thing that is
-not allowed is for the compiler to quietly accept any of them.
+Write a test for each, next to a similar valid case.
 
 ## What you need to have
 
@@ -477,7 +533,8 @@ not allowed is for the compiler to quietly accept any of them.
 - A token for every kind in the specification's lexical chapter, and the
   end-of-file token.
 - Kind, original spelling and span on every token.
-- Keywords recognized by exact, case-sensitive spelling.
+- Keywords recognized by exact, case-sensitive spelling, and reserved words
+  rejected.
 - Decimal and binary integers, floats with optional exponent, booleans,
   characters and strings, with the five escapes.
 - The longest-match rule for operators and punctuation.
@@ -485,9 +542,9 @@ not allowed is for the compiler to quietly accept any of them.
 - Every lexical error from the specification, reported in the stage 1 format
   with an accurate span.
 - Progress after every error, and exactly one end token.
-- A way for the driver to print the token stream.
-- Tests for every token kind and every lexical error, including the ones on
-  this page's open-decision list.
+- The driver's `--tokens` option, which prints the token stream.
+- Tests for every token kind and every lexical error in the specification's
+  list, including malformed numeric runs and the block-comment markers.
 
 </div>
 <div class="vx-not-yet" markdown="1">
@@ -532,12 +589,12 @@ a correct token stream with accurate source locations". In detail:
   specification says;
 - a file with several bad characters produces one error for each, and the
   lexer reaches the end;
-- the open decisions on this page are written down and tested;
+- each case in "Where these errors belong" has a test;
 - every earlier test still passes.
 
 ## Traps
 
-**Case-insensitive keywords.** `String` is reserved and `string` is not. A
+**Case-insensitive keywords.** `String` is a keyword and `string` is not. A
 lexer that folds case before comparing will get this wrong, and so will one
 that copies its keyword list from another language.
 

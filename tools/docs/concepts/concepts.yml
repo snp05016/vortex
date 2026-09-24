@@ -295,6 +295,10 @@ concepts:
       The type a literal gets when nothing around it asks for a different one.
       Whole-number literals default to `i32` and decimal literals default to
       `f32`.
+    spec: >-
+      The type a numeric literal has when its context gives it no target type:
+      `i32` for an integer literal and `f32` for a floating literal. See
+      [Literal typing](types-and-values.md#literal-typing).
     spec_ref: specification/types-and-values.md#43-integers
     introduced_in: language-tour/04-variables-and-types.md
     requires: [primitive-type, type-inference]
@@ -312,7 +316,10 @@ concepts:
       Allowed to change after it is created. A Vortex variable is mutable only
       when declared with `mut`; otherwise it is immutable and cannot be
       assigned again.
-    spec: Describes storage whose value may be changed through a valid assignment or mutable reference.
+    spec: >-
+      Describes a place that may be changed: its root is a variable declared
+      with `let mut`, or a name of type `&mut T`. Parameters are immutable. See
+      [References and mutability 9.3](references.md#93-local-mutability).
     spec_ref: specification/references.md#93-local-mutability
     introduced_in: language-tour/04-variables-and-types.md
     requires: [local-variable]
@@ -394,7 +401,9 @@ concepts:
       One size in an array's shape; `[f32; 4, 8]` has two dimensions, 4 and 8.
       Each dimension can be written as an expression, but it must evaluate at
       compile time to an integer that fits `usize`.
-    spec: One compile-time integer extent in an array shape.
+    spec: >-
+      One extent in an array shape. It is written as an integer constant
+      expression and evaluates to a value of at least 1.
     spec_ref: specification/arrays.md#72-dimension-rules
     introduced_in: language-tour/04-variables-and-types.md
     requires: [array]
@@ -512,9 +521,8 @@ concepts:
       variable, a struct field or an array element. A temporary result such as
       `a + b` is not addressable.
     spec: >-
-      Describes an expression that identifies existing storage and can
-      therefore be referenced. Variables, fields, and indexed array elements are
-      addressable in supported contexts; temporary calculations are not.
+      Describes an expression that identifies existing storage and can therefore
+      be referenced. Every place is addressable; temporary calculations are not.
     spec_ref: specification/references.md#92-reference-expressions
     introduced_in: language-tour/04-variables-and-types.md
     requires: [reference]
@@ -664,6 +672,11 @@ concepts:
       call, as in `f32(count)` or `i32(temperature)`. Only primitive type names
       can be cast targets, and a value that does not fit the new type is an
       error, never silently wrapped.
+    spec: >-
+      An expression that converts one value to a numeric type, written as a
+      numeric type keyword and one parenthesized operand, such as `f32(count)`.
+      See [Casts and
+      conversions](types-and-values.md#412-casts-and-conversions).
     spec_ref: specification/types-and-values.md#412-casts-and-conversions
     introduced_in: language-tour/08-expressions.md
     requires: [primitive-type, expression]
@@ -745,6 +758,11 @@ concepts:
       An expression for a bounded sequence of integers, mainly used by `for`
       loops. `0..10` includes 0 but not 10; `0..=10` includes both.
       Open-ended forms such as `..10` are not part of v0.1.
+    spec: >-
+      An expression `start..end`, which excludes `end`, or `start..=end`, which
+      includes it. In v0.1 a range may appear only as the iterable of a `for`
+      statement; it is not a value. See [Expressions
+      5.8](expressions.md#58-ranges).
     spec_ref: specification/expressions.md#58-ranges
     introduced_in: language-tour/08-expressions.md
     requires: [expression]
@@ -793,7 +811,10 @@ concepts:
     definition: >-
       A pair of braces `{ }` with zero or more statements inside. Every block
       creates a new scope, and in v0.1 a block is not itself a value.
-    spec: A brace-delimited ordered sequence of statements that creates a local scope.
+    spec: >-
+      A brace-delimited ordered sequence of statements that creates a local
+      scope. A function's body block shares one scope with the function's
+      parameters; see [Scopes](declarations.md#36-scopes).
     spec_ref: specification/statements.md#62-blocks
     introduced_in: language-tour/09-statements.md
     requires: [statement]
@@ -943,6 +964,10 @@ concepts:
       so that inside the inner scope the name means the new declaration.
       Whether Vortex allows this is not yet decided, so programs should not
       rely on it.
+    spec: >-
+      Declaring a name while another declaration of the same name is visible, so
+      that the new one would hide the old one. Vortex v0.1 forbids it; see
+      [Scopes](declarations.md#36-scopes).
     spec_ref: specification/declarations.md#36-scopes
     introduced_in: language-tour/10-declarations.md
     requires: [nested-scope, declaration]
@@ -1220,7 +1245,8 @@ concepts:
       permit a choice; should gives guidance only.
     spec: >-
       Required for language conformance. Informative explanations help readers
-      but do not create additional requirements.
+      but do not create additional requirements. The specification chapters are
+      normative; see [Document authority](conformance.md#11-document-authority).
     spec_ref: specification/index.md#normative-vocabulary
     introduced_in: specification/index.md
     requires: []
@@ -1238,7 +1264,10 @@ concepts:
       allowed only where the specification says so.
     spec: >-
       Describes behavior for which the specification permits a choice and
-      requires the implementation to document that choice.
+      requires the implementation to document that choice. Every such behavior,
+      and every implementation limit, is listed in [Implementation-defined
+      behavior and
+      limits](conformance.md#110-implementation-defined-behavior-and-limits).
     spec_ref: specification/conformance.md#16-implementation-defined-behavior
     introduced_in: specification/conformance.md
     requires: [normative]
@@ -1399,6 +1428,10 @@ concepts:
       A small number every program hands back to whoever started it when it
       finishes. By long convention zero means success and anything else means
       failure; test runners and build scripts read it.
+    spec: >-
+      The number a finished program hands back to whatever started it. A Vortex
+      program exits with 0 when `main` returns and with 101 after a runtime
+      error; see [Diagnostics](diagnostics.md#106-runtime-reporting).
     introduced_in: compiler/guide/stage-0-workbench.md
     requires: []
     used_in:
@@ -1647,8 +1680,10 @@ concepts:
       A stretch of source text, given as a start position and a length. Every
       token, every tree node and every error message carries one.
     spec: >-
-      A start position and length identifying the source characters
-      represented by a token, AST node, or diagnostic.
+      A byte offset from the start of the source file and a length in bytes,
+      identifying the source text of a token, AST node, or diagnostic.
+      Diagnostics show the start as a line and column, both counted from 1; see
+      [Conformance 1.7](conformance.md#17-source-locations).
     spec_ref: specification/conformance.md#17-source-locations
     introduced_in: compiler/guide/stage-1-source-and-diagnostics.md
     requires: [offset]
@@ -2099,7 +2134,9 @@ concepts:
     spec: >-
       The rule that determines grouping when operators at the same precedence
       level repeat. Most binary Vortex operators group left; prefix unary
-      operators group right.
+      operators group right. Equality, comparison and range operators do not
+      associate: repeating one without parentheses is a syntax error
+      ([why](../decisions/operators.md#d37)).
     spec_ref: specification/expressions.md#52-precedence-and-associativity
     introduced_in: compiler/guide/stage-3-parser-and-tree.md
     requires: [precedence]
@@ -2266,6 +2303,10 @@ concepts:
       A separate set of names. A struct's field names form their own
       namespace, reached through a value of that struct type, and do not clash
       with local variables.
+    spec: >-
+      A set of names in which each name has one meaning. All top-level functions
+      and structs share one namespace, and each struct's field names form a
+      separate one. See [Scopes](declarations.md#36-scopes).
     introduced_in: compiler/guide/stage-4-names-and-scopes.md
     requires: [field, scope]
     used_in: []
@@ -2280,7 +2321,7 @@ concepts:
       unknown, duplicate and out-of-scope names.
     spec: >-
       Connecting each name use to one visible declaration and diagnosing
-      unknown, duplicate, or out-of-scope names.
+      unknown, duplicate, shadowing, or out-of-scope names.
     spec_ref: specification/declarations.md#37-name-resolution
     introduced_in: compiler/guide/stage-4-names-and-scopes.md
     requires: [use, declaration, lookup]
@@ -2337,6 +2378,12 @@ concepts:
     definition: >-
       Allowed to be used together under the type rules. Vortex v0.1 has almost
       no automatic conversions, so compatible usually means the same type.
+    spec: >-
+      Describes two types that are equal after literal typing. Vortex v0.1 has
+      no implicit conversions, so wherever a rule requires compatible types they
+      must be the same type. See [Type
+      equality](types-and-values.md#411-type-equality) and the [decision
+      record](../decisions/numbers.md#d30).
     introduced_in: compiler/guide/stage-5-types-and-rules.md
     requires: [type]
     used_in:
@@ -2366,8 +2413,10 @@ concepts:
       language needs that value before the program runs. Array dimensions are
       the v0.1 case, so `[f32; 2 + 2]` becomes `[f32; 4]`.
     spec: >-
-      Evaluation performed by the compiler for an expression whose value is
-      required before code generation, including fixed array dimensions.
+      Evaluation performed by the compiler before the program runs: of fixed
+      array dimensions, and of every checked operation whose deciding operands
+      are integer constant expressions, where a failure is a constant-evaluation
+      error. See [Expressions 5.12](expressions.md#512-constant-expressions).
     spec_ref: specification/arrays.md#72-dimension-rules
     introduced_in: compiler/guide/stage-5-types-and-rules.md
     requires: [compile-time, dimension]
@@ -2661,6 +2710,8 @@ concepts:
     definition: >-
       The text stream a program writes to by default, usually shown in the
       terminal. Tests capture it to compare with the expected output.
+    spec: >-
+      The output stream for a program's normal results. `print` writes there.
     introduced_in: compiler/guide/stage-6-first-machine-code.md
     requires: [expected-output]
     used_in: []
@@ -3060,6 +3111,10 @@ concepts:
     definition: >-
       Storing a two-dimensional array one whole row after another, so that
       neighbours in a row are neighbours in memory.
+    spec: >-
+      The array layout in which the last index varies fastest: a `[T; 2, 2]` is
+      stored as `[0, 0]`, `[0, 1]`, `[1, 0]`, `[1, 1]`. Every v0.1 array uses
+      it. See [Arrays and shapes](arrays.md#78-memory-and-layout).
     introduced_in: compiler/guide/stage-8-data-in-memory.md
     requires: [contiguous, dimension]
     used_in: []
@@ -3512,3 +3567,387 @@ concepts:
       - compiler/ast-guide.md
     recall_question: What do we call a thin piece of work that goes through every compiler stage at once?
     recall_answer: A vertical slice, such as compiling one tiny program all the way to an executable.
+
+  # ---- Terms added to the glossary by the language decisions ---------------
+
+  - id: borrow
+    term: borrow
+    short: "The part of a program during which a reference made by & or &mut is live: to the end of the enclosing..."
+    definition: >-
+      The part of a program during which a reference made by & or &mut is live:
+      to the end of the enclosing block for a let binding, or for the whole call
+      for an argument. See References and mutability 9.8.
+    spec: >-
+      The part of a program during which a reference made by `&` or `&mut` is
+      live: to the end of the enclosing block for a `let` binding, or for the
+      whole call for an argument. See [References and mutability
+      9.8](references.md#98-aliasing).
+    spec_ref: specification/references.md#98-aliasing
+    introduced_in: specification/references.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the part of a program during which a reference made by & or &mut is live: to the end of the enclosing...?"
+    recall_answer: >-
+      Borrow. The part of a program during which a reference made by & or &mut
+      is live: to the end of the enclosing block for a let binding, or for the
+      whole call for an argument. See References and mutability 9.8.
+
+  - id: built-in-function
+    term: built-in function
+    short: "A function the language provides without a declaration"
+    definition: >-
+      A function the language provides without a declaration. Vortex v0.1 has
+      one, print; see Programs and declarations.
+    spec: >-
+      A function the language provides without a declaration. Vortex v0.1 has
+      one, `print`; see [Programs and
+      declarations](declarations.md#39-built-in-functions).
+    spec_ref: specification/declarations.md#39-built-in-functions
+    introduced_in: specification/declarations.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: a function the language provides without a declaration?"
+    recall_answer: >-
+      Built-in function. A function the language provides without a declaration.
+      Vortex v0.1 has one, print; see Programs and declarations.
+
+  - id: checked-operation
+    term: checked operation
+    short: "An operation that must detect an invalid case, such as integer overflow, division by zero or an..."
+    definition: >-
+      An operation that must detect an invalid case, such as integer overflow,
+      division by zero or an out-of-bounds index, and fail with a diagnostic
+      instead of producing a wrong value. See Expressions 5.5 and Arrays and
+      shapes 7.6.
+    spec: >-
+      An operation that must detect an invalid case, such as integer overflow,
+      division by zero or an out-of-bounds index, and fail with a diagnostic
+      instead of producing a wrong value. See [Expressions
+      5.5](expressions.md#checked-integer-operations) and [Arrays and shapes
+      7.6](arrays.md#76-indexing).
+    spec_ref: specification/expressions.md#checked-integer-operations
+    introduced_in: specification/expressions.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: an operation that must detect an invalid case, such as integer overflow, division by zero or an...?"
+    recall_answer: >-
+      Checked operation. An operation that must detect an invalid case, such as
+      integer overflow, division by zero or an out-of-bounds index, and fail
+      with a diagnostic instead of producing a wrong value. See Expressions 5.5
+      and Arrays and shapes 7.6.
+
+  - id: constant-expression
+    term: constant expression
+    short: "In v0.1, an integer constant expression: integer literals, each optionally preceded by unary -, combined..."
+    definition: >-
+      In v0.1, an integer constant expression: integer literals, each optionally
+      preceded by unary -, combined with parentheses and the binary operators +,
+      -, , / and %. Names and calls are never constant expressions. See
+      Expressions.
+    spec: >-
+      In v0.1, an integer constant expression: integer literals, each optionally
+      preceded by unary `-`, combined with parentheses and the binary operators
+      `+`, `-`, `*`, `/` and `%`. Names and calls are never constant
+      expressions. See [Expressions](expressions.md#512-constant-expressions).
+    spec_ref: specification/expressions.md#512-constant-expressions
+    introduced_in: specification/expressions.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: in v0.1, an integer constant expression: integer literals, each optionally preceded by unary -, combined...?"
+    recall_answer: >-
+      Constant expression. In v0.1, an integer constant expression: integer
+      literals, each optionally preceded by unary -, combined with parentheses
+      and the binary operators +, -, , / and %. Names and calls are never
+      constant expressions. See Expressions.
+
+  - id: deciding-operand
+    term: deciding operand
+    short: "An operand whose value decides whether a checked operation fails: the divisor for division by zero, the..."
+    definition: >-
+      An operand whose value decides whether a checked operation fails: the
+      divisor for division by zero, the count for a shift, the index for bounds,
+      the operand for a cast, and every operand for overflow. See Expressions
+      5.12.
+    spec: >-
+      An operand whose value decides whether a checked operation fails: the
+      divisor for division by zero, the count for a shift, the index for bounds,
+      the operand for a cast, and every operand for overflow. See [Expressions
+      5.12](expressions.md#512-constant-expressions).
+    spec_ref: specification/expressions.md#512-constant-expressions
+    introduced_in: specification/expressions.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: an operand whose value decides whether a checked operation fails: the divisor for division by zero, the...?"
+    recall_answer: >-
+      Deciding operand. An operand whose value decides whether a checked
+      operation fails: the divisor for division by zero, the count for a shift,
+      the index for bounds, the operand for a cast, and every operand for
+      overflow. See Expressions 5.12.
+
+  - id: fragment
+    term: fragment
+    short: "An example block that shows a type, an expression or a partial construct for its syntax"
+    definition: >-
+      An example block that shows a type, an expression or a partial construct
+      for its syntax. A fragment is never compiled and has no result. See
+      Specification examples.
+    spec: >-
+      An example block that shows a type, an expression or a partial construct
+      for its syntax. A fragment is never compiled and has no result. See
+      [Specification examples](conformance.md#18-specification-examples).
+    spec_ref: specification/conformance.md#18-specification-examples
+    introduced_in: specification/conformance.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: an example block that shows a type, an expression or a partial construct for its syntax?"
+    recall_answer: >-
+      Fragment. An example block that shows a type, an expression or a partial
+      construct for its syntax. A fragment is never compiled and has no result.
+      See Specification examples.
+
+  - id: implicit-dereference
+    term: implicit dereference
+    short: "The rule that a name of type &T or &mut T denotes its referent: used as a value, the name reads the..."
+    definition: >-
+      The rule that a name of type &T or &mut T denotes its referent: used as a
+      value, the name reads the referent, and as the root of an assignment
+      target, it writes the referent. Vortex v0.1 has no dereference operator.
+      See Using a reference.
+    spec: >-
+      The rule that a name of type `&T` or `&mut T` denotes its referent: used
+      as a value, the name reads the referent, and as the root of an assignment
+      target, it writes the referent. Vortex v0.1 has no dereference operator.
+      See [Using a reference](references.md#using-a-reference).
+    spec_ref: specification/references.md#using-a-reference
+    introduced_in: specification/references.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the rule that a name of type &T or &mut T denotes its referent: used as a value, the name reads the...?"
+    recall_answer: >-
+      Implicit dereference. The rule that a name of type &T or &mut T denotes
+      its referent: used as a value, the name reads the referent, and as the
+      root of an assignment target, it writes the referent. Vortex v0.1 has no
+      dereference operator. See Using a reference.
+
+  - id: label
+    term: label
+    short: "The comment on the first line of every vortex example block, such as // statements: type error, that names..."
+    definition: >-
+      The comment on the first line of every vortex example block, such as //
+      statements: type error, that names what the block contains and what a
+      conforming implementation must do with it. See Specification examples.
+    spec: >-
+      The comment on the first line of every `vortex` example block, such as `//
+      statements: type error`, that names what the block contains and what a
+      conforming implementation must do with it. See [Specification
+      examples](conformance.md#18-specification-examples).
+    spec_ref: specification/conformance.md#18-specification-examples
+    introduced_in: specification/conformance.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the comment on the first line of every vortex example block, such as // statements: type error, that names...?"
+    recall_answer: >-
+      Label. The comment on the first line of every vortex example block, such
+      as // statements: type error, that names what the block contains and what
+      a conforming implementation must do with it. See Specification examples.
+
+  - id: literal-typing
+    term: literal typing
+    short: "The rule that gives an integer or floating literal its type from a peer operand, an expected type, or its..."
+    definition: >-
+      The rule that gives an integer or floating literal its type from a peer
+      operand, an expected type, or its default type. See Literal typing.
+    spec: >-
+      The rule that gives an integer or floating literal its type from a peer
+      operand, an expected type, or its default type. See [Literal
+      typing](types-and-values.md#literal-typing).
+    spec_ref: specification/types-and-values.md#literal-typing
+    introduced_in: specification/types-and-values.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the rule that gives an integer or floating literal its type from a peer operand, an expected type, or its...?"
+    recall_answer: >-
+      Literal typing. The rule that gives an integer or floating literal its
+      type from a peer operand, an expected type, or its default type. See
+      Literal typing.
+
+  - id: place
+    term: place
+    short: "An expression that names storage: a name followed by zero or more index and field suffixes, such as..."
+    definition: >-
+      An expression that names storage: a name followed by zero or more index
+      and field suffixes, such as points[index].x. The name is the place's root.
+      Assignment targets and the operands of & and &mut are places. See
+      References and mutability 9.3.
+    spec: >-
+      An expression that names storage: a name followed by zero or more index
+      and field suffixes, such as `points[index].x`. The name is the place's
+      root. Assignment targets and the operands of `&` and `&mut` are places.
+      See [References and mutability 9.3](references.md#93-local-mutability).
+    spec_ref: specification/references.md#93-local-mutability
+    introduced_in: specification/references.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: an expression that names storage: a name followed by zero or more index and field suffixes, such as...?"
+    recall_answer: >-
+      Place. An expression that names storage: a name followed by zero or more
+      index and field suffixes, such as points[index].x. The name is the place's
+      root. Assignment targets and the operands of & and &mut are places. See
+      References and mutability 9.3.
+
+  - id: planned
+    term: planned
+    short: "Describes syntax, behavior or an example that is not part of v0.1 but shows a direction for a later version"
+    definition: >-
+      Describes syntax, behavior or an example that is not part of v0.1 but
+      shows a direction for a later version. A v0.1 implementation must not
+      accept planned syntax. See Specification examples and record 50.
+    spec: >-
+      Describes syntax, behavior or an example that is not part of v0.1 but
+      shows a direction for a later version. A v0.1 implementation must not
+      accept planned syntax. See [Specification
+      examples](conformance.md#18-specification-examples) and [record
+      50](../decisions/documentation.md#d50).
+    spec_ref: specification/conformance.md#18-specification-examples
+    introduced_in: specification/conformance.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: describes syntax, behavior or an example that is not part of v0.1 but shows a direction for a later version?"
+    recall_answer: >-
+      Planned. Describes syntax, behavior or an example that is not part of v0.1
+      but shows a direction for a later version. A v0.1 implementation must not
+      accept planned syntax. See Specification examples and record 50.
+
+  - id: referent
+    term: referent
+    short: "The storage a reference refers to"
+    definition: >-
+      The storage a reference refers to. Using a reference's name reads or
+      writes its referent. See References and mutability 9.4.
+    spec: >-
+      The storage a reference refers to. Using a reference's name reads or
+      writes its referent. See [References and mutability
+      9.4](references.md#94-shared-references).
+    spec_ref: specification/references.md#94-shared-references
+    introduced_in: specification/references.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the storage a reference refers to?"
+    recall_answer: >-
+      Referent. The storage a reference refers to. Using a reference's name
+      reads or writes its referent. See References and mutability 9.4.
+
+  - id: reserved-word
+    term: reserved word
+    short: "A spelling set aside for a future version, such as i64 or const"
+    definition: >-
+      A spelling set aside for a future version, such as i64 or const. It has no
+      meaning in v0.1, and using it outside a comment or literal is a lexical
+      error. See Lexical structure and decision 29.
+    spec: >-
+      A spelling set aside for a future version, such as `i64` or `const`. It
+      has no meaning in v0.1, and using it outside a comment or literal is a
+      lexical error. See [Lexical structure](lexical-structure.md#24-keywords)
+      and [decision 29](../decisions/lexical.md#d29).
+    spec_ref: specification/lexical-structure.md#24-keywords
+    introduced_in: specification/lexical-structure.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: a spelling set aside for a future version, such as i64 or const?"
+    recall_answer: >-
+      Reserved word. A spelling set aside for a future version, such as i64 or
+      const. It has no meaning in v0.1, and using it outside a comment or
+      literal is a lexical error. See Lexical structure and decision 29.
+
+  - id: standard-error
+    term: standard error
+    short: "The output stream a program uses for error reports, kept separate from standard output"
+    definition: >-
+      The output stream a program uses for error reports, kept separate from
+      standard output. A runtime error is reported there.
+    spec: >-
+      The output stream a program uses for error reports, kept separate from
+      standard output. A runtime error is reported there.
+    introduced_in: specification/glossary.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the output stream a program uses for error reports, kept separate from standard output?"
+    recall_answer: >-
+      Standard error. The output stream a program uses for error reports, kept
+      separate from standard output. A runtime error is reported there.
+
+  - id: static-error
+    term: static error
+    short: "The example-label group for code that parses but must be rejected before it runs: a name, type, semantic..."
+    definition: >-
+      The example-label group for code that parses but must be rejected before
+      it runs: a name, type, semantic or constant-evaluation error. It is not a
+      diagnostic category; each example names its exact category. See
+      Specification examples and record 51.
+    spec: >-
+      The example-label group for code that parses but must be rejected before
+      it runs: a name, type, semantic or constant-evaluation error. It is not a
+      diagnostic category; each example names its exact category. See
+      [Specification examples](conformance.md#18-specification-examples) and
+      [record 51](../decisions/documentation.md#d51).
+    spec_ref: specification/conformance.md#18-specification-examples
+    introduced_in: specification/conformance.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: the example-label group for code that parses but must be rejected before it runs: a name, type, semantic...?"
+    recall_answer: >-
+      Static error. The example-label group for code that parses but must be
+      rejected before it runs: a name, type, semantic or constant-evaluation
+      error. It is not a diagnostic category; each example names its exact
+      category. See Specification examples and record 51.
+
+  - id: terminating-statement
+    term: terminating statement
+    short: "A statement after which execution cannot continue with the next statement: a return, a non-empty block..."
+    definition: >-
+      A statement after which execution cannot continue with the next statement:
+      a return, a non-empty block whose last statement terminates, or an if with
+      an else whose branches both terminate. Loops never terminate. See
+      Statements 6.10.
+    spec: >-
+      A statement after which execution cannot continue with the next statement:
+      a `return`, a non-empty block whose last statement terminates, or an `if`
+      with an `else` whose branches both terminate. Loops never terminate. See
+      [Statements 6.10](statements.md#610-return).
+    spec_ref: specification/statements.md#610-return
+    introduced_in: specification/statements.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: a statement after which execution cannot continue with the next statement: a return, a non-empty block...?"
+    recall_answer: >-
+      Terminating statement. A statement after which execution cannot continue
+      with the next statement: a return, a non-empty block whose last statement
+      terminates, or an if with an else whose branches both terminate. Loops
+      never terminate. See Statements 6.10.
+
+  - id: unicode-scalar-value
+    term: Unicode scalar value
+    short: "A Unicode code point other than a surrogate: U+0000 to U+D7FF or U+E000 to U+10FFFF"
+    definition: >-
+      A Unicode code point other than a surrogate: U+0000 to U+D7FF or U+E000 to
+      U+10FFFF. Each source character and each char value is one Unicode scalar
+      value. See Lexical structure and decision 15.
+    spec: >-
+      A Unicode code point other than a surrogate: U+0000 to U+D7FF or U+E000 to
+      U+10FFFF. Each source character and each `char` value is one Unicode
+      scalar value. See [Lexical
+      structure](lexical-structure.md#source-encoding) and [decision
+      15](../decisions/lexical.md#d15).
+    spec_ref: specification/lexical-structure.md#source-encoding
+    introduced_in: specification/lexical-structure.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: a Unicode code point other than a surrogate: U+0000 to U+D7FF or U+E000 to U+10FFFF?"
+    recall_answer: >-
+      Unicode scalar value. A Unicode code point other than a surrogate: U+0000
+      to U+D7FF or U+E000 to U+10FFFF. Each source character and each char value
+      is one Unicode scalar value. See Lexical structure and decision 15.
+
+  - id: warning
+    term: warning
+    short: "A diagnostic that points out a likely mistake without rejecting the program"
+    definition: >-
+      A diagnostic that points out a likely mistake without rejecting the
+      program. Warnings are optional and never change whether a program is
+      accepted. See Diagnostics 10.1.
+    spec: >-
+      A diagnostic that points out a likely mistake without rejecting the
+      program. Warnings are optional and never change whether a program is
+      accepted. See [Diagnostics
+      10.1](diagnostics.md#101-required-diagnostic-data).
+    spec_ref: specification/diagnostics.md#101-required-diagnostic-data
+    introduced_in: specification/diagnostics.md
+    requires: []
+    recall_question: "Which term does the specification use for this idea: a diagnostic that points out a likely mistake without rejecting the program?"
+    recall_answer: >-
+      Warning. A diagnostic that points out a likely mistake without rejecting
+      the program. Warnings are optional and never change whether a program is
+      accepted. See Diagnostics 10.1.

@@ -77,7 +77,8 @@ at once. Figure 1 shows where it sits among the other stages.
 The roadmap lists six items for
 [Milestone 11](../../roadmap.md#milestone-11-v01-release-gate): run every
 valid and invalid compiler test; compile every v0.1 example from the
-documentation; verify diagnostic source locations and runtime error messages;
+documentation and check that each gives the result its label names; verify
+diagnostic source locations and runtime error messages;
 document the compiler command, supported features and known limitations;
 confirm that a clean checkout can build and run the test suite; and mark the
 release as `v0.1.0` "only after every item above passes".
@@ -163,7 +164,9 @@ needs "both local and pipeline tests", and it names six kinds:
 3. Name and type tests pair one accepted program with the nearest rejected
    form.
 4. Constant-evaluation tests separate dimensions that are merely grammatical
-   from dimensions that also meet the compile-time rules.
+   from dimensions that also meet the compile-time rules, and pair each check
+   on constant operands, such as `10 / 0`, with the same operation on
+   variables, which must compile and fail at run time.
 5. Lowering tests compare the observable output of valid programs.
 6. End-to-end tests check diagnostics and executable behavior.
 
@@ -225,6 +228,7 @@ test is not rejecting a broader valid form".
 Here is such a pair, using the chapter's own immutable-assignment example:
 
 ```vortex
+// program: semantic error
 fn main() {
     let value = 10;
     value = 20;
@@ -233,6 +237,7 @@ fn main() {
 ```
 
 ```vortex
+// program: valid
 fn main() {
     let mut value = 10;
     value = 20;
@@ -247,23 +252,30 @@ pair is what makes the test mean something.
 
 At release, every rule in the specification should have its pair, and the
 test runner should check the category and the span of every rejection, not
-only that the compiler failed.
+only that the compiler failed. [I3](../../decisions/implementation.md#i3)
+suggests comparing the exit status and, for every error in order, its
+category and the line and column where its primary span starts, never the
+message text.
 
 ## Compiling every example in the documentation
 
-The roadmap asks you to "compile every v0.1 example from the documentation".
-The Vortex site has many examples, in the specification, the language tour,
-the grammar reference and the roadmap itself. Many of them already say what
-they are. The [conformance chapter](../../specification/conformance.md#18-specification-examples)
-defines the labels:
+The roadmap asks you to "compile every v0.1 example from the documentation",
+and to "check that each gives the result its label names". The Vortex site has
+many examples, in the specification, the language tour, the grammar reference
+and the roadmap itself. Each one says what it is: its first line is a label,
+such as `// items: type error`, that the
+[conformance chapter](../../specification/conformance.md#18-specification-examples)
+defines ([decision](../../decisions/documentation.md#d28)). The kind tells you
+how to complete the block, and the result tells you what the compiler must do
+with it:
 
-| Label | What the compiler must do |
+| Result | What the compiler must do |
 | --- | --- |
-| Valid | Accept it |
-| Invalid syntax | Reject it while lexing or parsing |
-| Semantic error | Parse it, then reject it in a later static phase |
-| Runtime error | Accept it, and have the executable stop with a runtime error |
-| Planned | Reject it: it is not v0.1 |
+| `valid` | Accept it; when run, it finishes without a runtime error |
+| `lexical error`, `syntax error` | Reject it while lexing or parsing, with that category |
+| `name error`, `type error`, `semantic error`, `constant-evaluation error` | Parse it, then reject it in a later static phase with that category (the ["Static error"](../../decisions/documentation.md#d51) group) |
+| `runtime error` | Accept it, and have the executable stop with a runtime error |
+| `planned` | Reject it: it is not v0.1 |
 
 That last row is easy to forget. The conformance chapter says a compiler must
 "avoid accepting planned syntax as though it were standardized v0.1 syntax".
@@ -272,19 +284,22 @@ The tour's kernel example, for instance, uses a `kernel` keyword, slices and a
 A test that confirms the rejection is as much a part of the release as a test
 that confirms matrix multiplication works.
 
-Two practical decisions come with this item, and both belong in your test
-documentation.
+Two practical questions come with this item.
 
-The first is how to handle fragments. Many examples are not whole programs.
-`[f32; 4]` is a type on its own, and `let row: [f32; 2 + 2] = [0.0; 2 + 2];`
-is a statement with no function around it. Top-level statements are a syntax
-error, so such examples need to be placed inside a function before they can
-be tested. Decide how that is done and apply it the same way every time.
+The first, how to test blocks that are not whole programs, is settled by the
+labels. A `statements` block such as
+`let row: [f32; 2 + 2] = [0.0; 2 + 2];` is tested inside `fn main() { ... }`,
+because top-level statements are a syntax error. An `items` block gets
+`fn main() {}` appended when it has no `main`. A `fragment`, such as the type
+`[f32; 4]` on its own, is never compiled.
 
 The second is how to keep the examples and the tests from drifting apart. If
 examples are copied into the test suite by hand, a later edit to the
 documentation will not reach the tests. Whatever method you choose, a changed
 example should either be retested automatically or cause a visible failure.
+[I10](../../decisions/implementation.md#i10) suggests a checker that reads
+every block straight from the documentation, completes it by its label and
+runs `vortex` on it, so nothing is copied.
 
 ## The clean checkout
 
@@ -306,41 +321,39 @@ The roadmap asks for three pieces of documentation: the compiler command,
 the supported features, and the known limitations.
 
 **The compiler command** is the user's first contact: how to run `vortex` on
-a file, what it produces, and where errors and output go.
+a file, what it produces, and where errors and output go. The
+[command-line decision](../../decisions/program.md#d20) fixes the options, the
+streams and the exit statuses; the release document restates them for users,
+with an example of each option.
 
 **Supported features** can mostly point at the specification. The useful
-extra is anything the compiler adds within the room the spec leaves it, such
-as the memory layout document from [stage 8](stage-8-data-in-memory.md) and
-the runtime error format and exit status from
-[stage 9](stage-9-runtime-safety.md). The conformance chapter says that where
-behavior is implementation-defined, the implementation "must document the
-selected behavior and apply it consistently".
+extra is the compiler's answer to each entry in the conformance chapter's
+[list of implementation-defined behavior and limits](../../specification/conformance.md#110-implementation-defined-behavior-and-limits):
+the width of `usize`, the stack size, the array and source limits, the
+diagnostic layout, which warnings exist, the runtime message text, the layout
+document from [stage 8](stage-8-data-in-memory.md), and the targets. For each
+entry, the conformance chapter says the implementation "must document the
+selected behavior and apply it consistently"
+([decision](../../decisions/documentation.md#d55)). The form of the runtime
+error line and the exit statuses are fixed by
+[Diagnostics 10.6](../../specification/diagnostics.md#106-runtime-reporting)
+([decision](../../decisions/program.md#d14)), so they are not choices.
 
 **Known limitations** are where honesty pays. The conformance chapter says a
 conforming compiler must "document any implementation limit that is narrower
 than the language design", and the diagnostics chapter provides an
 **implementation-limit error** category for specified behavior the compiler
-has not yet built. It adds that this category "must not be used to disguise a
-crash or silently ignore source". A clear limitation is fine. A hidden one is
-a bug.
+has not yet built. The same category reports a program that runs out of stack
+([record 46](../../decisions/diagnostics.md#d46)). The diagnostics chapter
+adds that this category "must not be used to disguise a crash or silently
+ignore source". A clear limitation is fine. A hidden one is a bug.
 
-The specification also leaves several questions open, and a release should
-list how the compiler answers each one:
-
-- whether an array dimension of zero is allowed (the arrays chapter says to
-  diagnose it as unsupported until the spec decides);
-- how an empty struct is constructed, since the grammar accepts
-  `struct Marker {}` but no expression can build one;
-- whether a nested list literal can initialize a multidimensional array;
-- the full table of which numeric casts are allowed;
-- whether invalid shift counts are a checked runtime error;
-- how NaN and infinity print, and what casting them to an integer does;
-- which integer types may be used as array indexes;
-- the exact forms of `print` that are supported.
-
-None of these needs to be settled by the compiler alone. Each one does need to
-be written down, so that a user who hits it finds an answer instead of a
-surprise.
+Earlier drafts of the specification left several questions open, such as
+zero-length arrays, empty structs, the cast table and the forms of `print`.
+The [decision records](../../decisions/index.md) settle each one, and the
+specification now states the answers, so a release does not choose them. What
+a release does choose is exactly the conformance list above: write down each
+choice, so that a user who hits one finds an answer instead of a surprise.
 
 ## Naming the release
 
@@ -364,10 +377,10 @@ one specific compiler.
 - Every test from every earlier milestone passing in one run: the first item of the gate.
 - Valid and invalid pairs for every rule, checking category and span: required by the diagnostics chapter.
 - Every documented example tested according to its label, including rejection of planned syntax.
-- Runtime error messages checked for category and location, as the gate requires.
+- Runtime error lines checked for kind and position, as the gate requires.
 - A successful build and test run from a clean checkout with one command.
 - Documentation of the compiler command, supported features, layout and runtime choices.
-- A known limitations list, including the open questions above.
+- A known limitations list, and the compiler's documented choice for every entry in the implementation-defined list.
 - The name `v0.1.0`, applied last.
 
 </div>
@@ -378,7 +391,6 @@ one specific compiler.
 - Performance tests or benchmarks: v0.1 is about correctness.
 - Packaging, installers or distribution through package managers: the roadmap does not ask for them.
 - Support for more than the CPU target you chose: GPU work is after v0.1.
-- Answers to every open question in the spec: documenting your choice is enough.
 - Features from the after v0.1 list, however close they seem.
 
 </div>
@@ -412,7 +424,10 @@ a change makes it fail for the wrong reason. Check the category and the span.
 **Letting known failures turn into noise.** If some tests always fail and
 everyone learns to ignore them, a new failure will hide among them. Mark known
 limitations explicitly as expected failures, so that the suite is either green
-or has something new to say.
+or has something new to say. [I9](../../decisions/implementation.md#i9)
+suggests a mark in the test's own expected file that names the stage that will
+make it pass, such as `xfail: stage 8`, and a failed run when a marked test
+starts passing.
 
 **Forgetting the planned examples.** Accepting future syntax by accident is a
 conformance failure, and it is easy to do when the parser is written
@@ -466,6 +481,8 @@ message.
 The roadmap's [After v0.1](../../roadmap.md#after-v01) list is the map for
 what comes next. It is deliberately kept out of the first release:
 
+- named constants (`const` declarations), so that array dimensions can use
+  names;
 - dead-code elimination and constant folding;
 - loop transformations, tiling and fusion;
 - SIMD vectorization and multicore execution;
@@ -474,7 +491,8 @@ what comes next. It is deliberately kept out of the first release:
 - optimization diagnostics, cost models and auto-tuning;
 - modules, packages, generics, traits and advanced ownership.
 
-The first two lines are classic compiler optimization. The LLVM tutorial's
+The first line is the first language addition planned after v0.1. The next two
+are classic compiler optimization. The LLVM tutorial's
 chapter 4 is a gentle introduction: it starts with trivial constant folding
 and then adds a handful of standard passes that clean up generated
 code.[^kal4] Everything you release in v0.1 becomes the known answer those

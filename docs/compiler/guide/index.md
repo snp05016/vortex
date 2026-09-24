@@ -93,6 +93,7 @@ one stage receives and what it hands to the next.
 **Step 1. Source text**
 
 ```vortex
+// statements: valid
 let result = 2 + 3 * 4;
 ```
 
@@ -252,6 +253,12 @@ where to look.
 | [10. Matrix multiplication](stage-10-matrix-multiplication.md) | The first real Vortex program | Milestone 10 |
 | [11. Release](stage-11-release.md) | Proving that all of it works together | Milestone 11 |
 
+Where a stage meets a language rule, it links the
+[decision record](../../decisions/index.md) that explains why the rule was
+chosen. Where it leaves a choice to you, it links the suggested default in
+[Implementation choices](../../decisions/implementation.md), which you may
+follow or replace, as long as you write your choice down.
+
 ## How to use the sources
 
 The guide leans on a small set of sources, listed with notes in the
@@ -271,8 +278,8 @@ names apply to Vortex almost directly.
 
 When a source and a Vortex document disagree, the Vortex document wins. The
 [specification](../../specification/index.md) defines the language, and the
-[conformance chapter](../../specification/conformance.md) sets the order of
-authority between the documents.
+[conformance chapter](../../specification/conformance.md#11-document-authority)
+sets the order of authority between the documents.
 
 [^ci-map]: Robert Nystrom, *Crafting Interpreters*, chapter "A Map of the Territory". <https://craftinginterpreters.com/a-map-of-the-territory.html>
 [^ci]: Robert Nystrom, *Crafting Interpreters* (2021). <https://craftinginterpreters.com/>

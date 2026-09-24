@@ -28,8 +28,11 @@ to one visible declaration".
 Along the way it rejects the programs where that question has no good answer.
 A name that nothing declares is an error. Two declarations with the same name
 in the same place are an error, because a use could not choose between them.
-A name used outside the region where it exists is an error. And, because the
-roadmap puts it here, a program without exactly one valid `main` is an error.
+A name used outside the region where it exists is an error. So is a
+declaration that reuses a name already visible at that point, such as a local
+named like a parameter, because Vortex does not let one name hide another.
+And, because the roadmap puts it here, a program without exactly one valid
+`main` is an error.
 
 What this stage does not do is ask whether a use makes sense for the thing it
 found. `width * 2` could name a boolean. That is a type question, and it waits
@@ -44,7 +47,8 @@ name
 
 declaration
 : A place in the program that introduces a name, such as `let width = 128;`
-  or `fn scale(...)`. It says "from here, this name means this thing".
+  or `fn scale(...)`. It says "where I am visible, this name means this
+  thing".
 
 use
 : A place in the program where a name appears in order to refer to something
@@ -56,7 +60,8 @@ scope
 
 block
 : A pair of braces `{ }` with statements inside. In Vortex every block
-  creates a new scope.
+  creates a new scope, except a function's body, whose locals share one scope
+  with the function's parameters.
 
 nested scope
 : A scope inside another scope. Code in the inner scope can see names from
@@ -73,7 +78,7 @@ lookup
 shadowing
 : Declaring a name in an inner scope that is already declared in an outer
   scope, so that inside the inner scope the name means the new declaration.
-  Whether Vortex allows this is not yet decided.
+  Vortex does not allow it: such a declaration is a name error.
 
 duplicate declaration
 : Two declarations of the same name in the same scope.
@@ -84,9 +89,10 @@ symbol table
   structure.
 
 namespace
-: A separate set of names. A struct's field names form their own namespace,
-  reached through a value of that struct type, and do not clash with local
-  variables.
+: A separate set of names. All top-level functions and structs share one
+  namespace, so a function and a struct cannot have the same name. A struct's
+  field names form their own namespace, reached through a value of that struct
+  type, and do not clash with any other name.
 
 name resolution
 : The stage that links each use to its declaration and reports unknown,
@@ -97,8 +103,9 @@ entry point
 
 name error
 : The [diagnostic category](../../specification/diagnostics.md#name-error)
-  for a name that is unknown, duplicated in the same scope, or used outside
-  its scope, and for a named type that does not resolve.
+  for a name that is unknown, duplicated in the same scope, declared where the
+  same name is already visible, or used outside its scope, and for a named
+  type that does not resolve.
 
 ## Declarations and uses
 
@@ -106,6 +113,7 @@ Every name in a Vortex program appears in one of two roles. Either it is
 being declared, or it is being used. Take this program:
 
 ```vortex
+// program: valid
 struct Point {
     x: f32,
     y: f32,
@@ -145,24 +153,29 @@ gives that check to type checking. More on this in
 ## Scopes nest
 
 A **scope** is where a name can be used. The [declarations
-chapter](../../specification/declarations.md#36-scopes) lists four kinds:
+chapter](../../specification/declarations.md#36-scopes) lists five kinds:
 
-- the program scope, holding function and struct names;
-- a function scope, holding that function's parameter names;
-- a block scope, one for every `{ }`, holding the locals declared in it;
+- the built-in scope around the whole program, holding `print`;
+- the program scope, holding every function and struct name in one namespace;
+- a function scope, holding that function's parameter names and the locals
+  declared directly in its body (the body does not open a second scope);
+- a block scope for every other `{ }`, holding the locals declared in it (the
+  scope of a `for` body also holds the loop variable);
 - a struct's field namespace, reached through a value of that struct type.
 
 Blocks can sit inside blocks, so scopes form a nest, like boxes inside boxes.
 Two rules from the spec decide what is visible where. "A local variable
-becomes visible at its declaration and remains visible until the end of its
-block." And "A loop variable is visible only in the loop body."
+becomes visible after its complete declaration, including its initializer, and
+remains visible until the end of its block." And "A loop variable is visible
+only in the loop body."
 
 When the compiler meets a use, it looks for the name in the innermost scope
 around it. If the name is not there, it looks one scope further out, and so
-on, until it reaches the program scope. If it is not there either, the name is
-unknown.
+on, until it reaches the program scope, and last the built-in scope that holds
+`print`. If it is not there either, the name is unknown.
 
 ```vortex
+// program: valid
 fn scale(factor: f32) {
     let base = 2.0;
     {
@@ -179,13 +192,11 @@ fn main() {
 <figure class="vx-figure">
 <svg viewBox="0 0 760 400" role="img" aria-labelledby="walk-title walk-desc">
 <title id="walk-title">Looking up the name factor through nested scopes</title>
-<desc id="walk-desc">Four nested boxes. The outermost is the program scope holding scale and main. Inside it is the parameter scope of scale holding factor. Inside that is the body block holding base. Innermost is an inner block holding local, which contains the line let local = base * factor. The lookup for factor checks the inner block, then the body block, and finds factor in the parameter scope.</desc>
+<desc id="walk-desc">Three nested boxes. The outermost is the program scope holding scale and main. Inside it is the function scope of scale, holding the parameter factor and the local base. Innermost is an inner block holding local, which contains the line let local = base * factor. The lookup for factor checks the inner block, then finds factor in the function scope.</desc>
 <rect class="vx-box" x="10" y="10" width="740" height="380"/>
 <text class="vx-text" x="24" y="34">Program scope: scale, main</text>
 <rect class="vx-box" x="40" y="50" width="680" height="320"/>
-<text class="vx-text" x="54" y="74">Parameters of scale: factor</text>
-<rect class="vx-box" x="70" y="90" width="620" height="260"/>
-<text class="vx-text" x="84" y="114">Body block of scale: base</text>
+<text class="vx-text" x="54" y="74">Function scope of scale: factor, base</text>
 <rect class="vx-box-strong" x="100" y="130" width="560" height="200"/>
 <text class="vx-text" x="114" y="154">Inner block: local</text>
 <rect class="vx-box-accent vx-pulse" x="286" y="192" width="52" height="24"/>
@@ -193,26 +204,24 @@ fn main() {
 <text class="vx-mono" x="140" y="239">print(local);</text>
 <text class="vx-text-muted" x="140" y="284">The use of factor is looked up from the inside out.</text>
 <text class="vx-text-muted" x="140" y="302">The search stops at the first scope that declares it.</text>
-<g class="vx-seq" style="--vx-i: 0; --vx-n: 3">
+<g class="vx-seq" style="--vx-i: 0; --vx-n: 2">
 <text class="vx-text-muted" x="448" y="154">1. inner block: not here</text>
 </g>
-<g class="vx-seq" style="--vx-i: 1; --vx-n: 3">
-<text class="vx-text-muted" x="448" y="114">2. body block: not here</text>
-</g>
-<g class="vx-seq" style="--vx-i: 2; --vx-n: 3">
-<text class="vx-text-accent" x="448" y="74">3. found: parameter factor</text>
+<g class="vx-seq" style="--vx-i: 1; --vx-n: 2">
+<text class="vx-text-accent" x="448" y="74">2. found: parameter factor</text>
 </g>
 <circle class="vx-dot" r="6">
-<animateMotion dur="3.6s" repeatCount="indefinite" path="M312 192 L432 150 L432 110 L432 70" keyPoints="0;0.62;0.62;0.81;0.81;1;1" keyTimes="0;0.25;0.35;0.55;0.65;0.85;1" calcMode="linear"/>
+<animateMotion dur="3.6s" repeatCount="indefinite" path="M312 192 L432 150 L432 70" keyPoints="0;0.62;0.62;1;1" keyTimes="0;0.3;0.45;0.8;1" calcMode="linear"/>
 </circle>
 </svg>
-<figcaption>Figure 1. Scopes as nested boxes. The use of <code>factor</code> is not declared in the inner block or the body block, so the lookup keeps moving outward until it reaches the parameters of <code>scale</code>. If it had reached the program scope and still found nothing, <code>factor</code> would be an unknown name.</figcaption>
+<figcaption>Figure 1. Scopes as nested boxes. The use of <code>factor</code> is not declared in the inner block, so the lookup moves outward to the function scope of <code>scale</code>, which holds its parameters and the locals of its body. If no scope out to the built-in one declared it, <code>factor</code> would be an unknown name.</figcaption>
 </figure>
 
 The same rules explain why a block keeps its variables to itself. The tour's
 example:
 
 ```vortex
+// program: name error
 fn main() {
     let outside = 1;
 
@@ -223,7 +232,7 @@ fn main() {
     }
 
     print(outside);
-    print(inside); // compile-time error: outside the scope of inside
+    print(inside); // name error: outside the scope of inside
 }
 ```
 
@@ -232,12 +241,14 @@ finds it. After the block closes, its box is gone, and the last line's lookup
 for `inside` finds nothing. The roadmap names this as a required check:
 "Keep variables inside the blocks where they were declared."
 
-Visible "at its declaration" also means that order matters inside a block. A
-local cannot be used on a line above its own `let`:
+Visible "after its complete declaration" means that order matters inside a
+block. A local cannot be used above its own `let`, or inside its own
+initializer:
 
 ```vortex
+// program: name error
 fn main() {
-    print(total); // invalid: total is not declared yet at this point
+    print(total); // name error: total is not declared yet at this point
     let total = 10;
 }
 ```
@@ -249,8 +260,9 @@ and struct fields". This guide will not tell you how to build one. What
 matters is the questions it must be able to answer, because every check on
 this page is one of these questions:
 
-- Is this name declared in this exact scope already? (Needed to catch
-  duplicates as each declaration arrives.)
+- Is this name already visible here, declared in this scope or in one around
+  it? (Needed to catch duplicates, and declarations that reuse a visible name,
+  as each declaration arrives.)
 - Walking outward from here, which declaration of this name is the nearest
   visible one? (Needed for every use.)
 - What kind of thing is that declaration: a function, a struct, a parameter,
@@ -276,7 +288,7 @@ up, so it helps to see them side by side.
 <figure class="vx-figure">
 <svg viewBox="0 0 760 310" role="img" aria-labelledby="three-title three-desc">
 <title id="three-title">Unknown name, duplicate name, and shadowing compared</title>
-<desc id="three-desc">Three panels. First, a block declares total but the code prints totl, which no scope declares; this is a name error. Second, one block declares count twice; the second declaration is a duplicate in the same scope and is a name error. Third, an outer block declares count and a nested inner block declares count again; this is shadowing, and Vortex has not decided whether it is allowed.</desc>
+<desc id="three-desc">Three panels. First, a block declares total but the code prints totl, which no scope declares; this is a name error. Second, one block declares count twice; the second declaration is a duplicate in the same scope and is a name error. Third, an outer block declares count and a nested inner block declares count again; this is shadowing, and Vortex rejects it as a name error.</desc>
 <text class="vx-text" x="130" y="24" text-anchor="middle">Unknown name</text>
 <rect class="vx-box" x="12" y="40" width="236" height="170"/>
 <text class="vx-text-muted" x="24" y="60">one block</text>
@@ -299,165 +311,158 @@ up, so it helps to see them side by side.
 <text class="vx-mono" x="530" y="90">let count = 1;</text>
 <rect class="vx-box-strong" x="524" y="106" width="212" height="92"/>
 <text class="vx-text-muted" x="536" y="126">inner block</text>
-<rect class="vx-box-accent" x="566" y="142" width="46" height="20"/>
+<rect class="vx-box-bad vx-pulse" x="566" y="142" width="46" height="20"/>
 <text class="vx-mono" x="540" y="156">let count = 2;</text>
 <text class="vx-mono" x="540" y="184">print(count);</text>
 <text class="vx-text-muted" x="630" y="240" text-anchor="middle">different scopes, same name</text>
-<text class="vx-text-accent" x="630" y="262" text-anchor="middle">not yet decided</text>
+<text class="vx-text" x="630" y="262" text-anchor="middle">name error</text>
 </svg>
-<figcaption>Figure 2. Two errors and one open question. In the first two panels the dashed box marks what the compiler rejects. In the third, both declarations are legal on their own; whether the inner one may reuse the outer name is a rule Vortex has not written yet.</figcaption>
+<figcaption>Figure 2. Three name errors. In each panel the dashed box marks what the compiler rejects. In the third, the two declarations are in different scopes, so neither is a duplicate, but the inner one reuses a name that is still visible, and Vortex does not let one name hide another.</figcaption>
 </figure>
 
-**Unknown name.** A use whose lookup reaches the program scope without
+**Unknown name.** A use whose lookup reaches the built-in scope without
 finding a declaration. The spec's own example is `print(missing_value);`
-inside `main`. It parses perfectly and fails here. A named type counts too:
-the grammar notes that `u64` "parses as a named type, then fails name
-resolution", because v0.1 has no `u64` and no struct by that name.
+inside `main`. It parses perfectly and fails here. A named type counts too: a
+type written `Grid` when no struct called `Grid` exists is an unknown name.
+(`u64` is different: it is reserved for a future version, so the lexer rejects
+it in [stage 2](stage-2-lexer.md) before any lookup; see
+[decision 29](../../decisions/lexical.md#d29).)
 
 **Duplicate name.** Two declarations of one name in the same scope. The spec
-is firm on this one: "Duplicate names in the same scope are invalid." It
+is firm on this one: "Names declared in the same scope must be distinct." It
 applies to every kind of scope. Two parameters called `value` in one
 function are rejected. Two fields called `value` in one struct are rejected.
-Two top-level functions called `add` are rejected. The error is reported at
-the second declaration, since the first was fine when it arrived. The
+Two top-level functions called `add` are rejected. So are a struct and a
+function with the same name, because all top-level names share one namespace.
+The error is reported at the second declaration, since the first was fine
+when it arrived. The
 [diagnostics chapter](../../specification/diagnostics.md#101-required-diagnostic-data)
 allows "optional notes pointing to related declarations", and a duplicate is
 the clearest case for one: point at the second, and add a note at the first.
 
-**Shadowing.** An inner scope declaring a name that an outer scope already
-declared. Neither declaration is a duplicate, because they are in different
-scopes. Whether this is allowed is the first of the open decisions below.
+**Shadowing.** An inner scope declaring a name that is visible from an outer
+scope. Neither declaration is a duplicate, because they are in different
+scopes, but Vortex rejects the inner one as a name error, reported there with a
+note at the outer one ([decision record](../../decisions/names.md#d2)).
 
-## Decisions Vortex has not made yet
+## Naming decisions this stage enforces {#decisions-vortex-has-not-made-yet}
 
-The spec leaves several naming rules open. Name resolution cannot be
-finished while they are open, because each one changes which programs are
-accepted. For each, this section says what the documents currently say and
-what the decision has to settle. When a decision is made, it belongs in the
-[declarations chapter](../../specification/declarations.md), not only in the
-compiler.
+These naming rules were open when this guide was first written. They are now
+decided, and the
+[declarations chapter](../../specification/declarations.md#36-scopes) states
+them. Each subsection gives the rule, an example and a link to the decision
+record that explains it.
 
 ### Shadowing an outer local
 
-What the documents say: the [declarations
-chapter](../../specification/declarations.md#36-scopes) states that "The exact
-policy for shadowing an outer local name in a nested block remains a
-specification decision", and that code "should not depend on shadowing until
-that rule is finalized". The [tour](../../language-tour/10-declarations.md#names-and-scopes)
-says the same.
+The rule: a declaration must not reuse a name that is visible where it
+appears. An inner block cannot redeclare an outer local, and no local,
+parameter or loop variable may take the name of a parameter, a top-level
+function or struct, or `print`. Each case is a name error, reported at the new
+declaration with a note at the visible one. Blocks that are never open at the
+same time may reuse a name. The roadmap's tests for shadowing therefore expect
+a name error ([decision record](../../decisions/names.md#d2)).
 
-The [roadmap](../../roadmap.md#milestone-4-names-and-scopes) asks for
-"tests for shadowing" in Milestone 4. A test needs an expected result, so
-this decision has to be made before the milestone can be called finished.
+```vortex
+// statements: name error
+let count = 1;
+{
+    let count = 2; // name error: count is already visible
+}
+```
 
-The decision must settle:
-
-- whether a local in an inner block may reuse the name of a local in an
-  outer block;
-- if it is allowed, that the inner name hides the outer one until the inner
-  block ends, and the outer one is visible again afterwards;
-- if it is forbidden, which diagnostic is reported, and whether it is the
-  same "duplicate name" error or a separate one that says "this hides an
-  outer variable".
+```vortex
+// statements: valid
+{
+    let count = 1;
+    print(count);
+}
+{
+    let count = 2; // valid: the first count is no longer visible
+    print(count);
+}
+```
 
 ### Parameters and the function body
 
-What the documents say: "a function scope contains its parameter names" and
-"each block creates a nested local scope". A function body is a block. Read
-literally, that makes the body a scope nested inside the parameter scope.
-
-The decision must settle whether this is a duplicate or a case of shadowing:
+The rule: a function's parameters and the locals declared directly in its body
+share one scope, and a `for` loop's variable shares the scope of the loop
+body. So the example below is a duplicate in one scope, which is a name
+error.
 
 ```vortex
+// items: name error
 fn describe(value: i32) {
-    let value = 10; // duplicate, or shadowing? not yet specified
+    let value = 10; // name error: value is already a parameter
     print(value);
 }
 ```
 
-The same question arises for a `for` loop. `for index in 0..4 { let index = 1; }`
-declares `index` once as the loop variable and once in the body block. If
-the parameter list and the top of the body count as one scope, both examples
-are duplicates. If they are two scopes, both are shadowing. Vortex has not
-said which.
+`for index in 0..4 { let index = 1; }` is a duplicate in the same way.
 
 ### Using a local inside its own initializer
 
-What the documents say: a local "becomes visible at its declaration". They do
-not say whether that point is before or after the initializer.
+The rule: a local becomes visible only after its complete declaration,
+initializer included.
 
 ```vortex
+// program: name error
 fn main() {
     let total = 5;
     {
-        let total = total + 1; // which total does the right side mean?
+        let total = total + 1; // name error: total is already visible
     }
 }
 ```
 
-If shadowing is forbidden, this is rejected anyway. If it is allowed, the
-decision must settle whether the right-hand `total` means the outer one (so
-the inner `total` is 6) or the one being declared (which has no value yet,
-and must be an error).
+The inner `total` would hide the outer one, so it is a name error. Without the
+outer `total`, the right-hand `total` would be an unknown name, also a name
+error. Either way, `let total = total + 1;` never compiles.
 
 ### Order of top-level declarations
 
-What the documents say: "Functions and structs may appear in either order",
-and the program scope "contains function and struct names". For locals, the
-spec says exactly when the name becomes visible. For functions and structs it
-does not. The tour says "A program can call a function after its declaration
-has been recorded by the compiler", which could mean after it appears in the
-file or after the compiler has collected all top-level names.
-
-The "either order" sentence is about the grammar: the parser accepts
-functions and structs in any sequence. It does not say whether `main` may
-call a function written below it. The decision must settle:
-
-- whether a function may call a function declared later in the file;
-- whether a struct field's type, or a parameter's type, may name a struct
-  declared later;
-- whether a function may call itself, which needs its own name to be visible
-  inside its own body;
-- whether two functions may call each other.
-
-Until this is decided, write test programs that declare everything before it
-is used, and add tests for the other order once the rule exists.
+The rule: every top-level function and struct name is visible throughout the
+file, including above its declaration
+([decision record](../../decisions/names.md#d3)). So `main` may call a
+function written below it, a function may call itself, two functions may call
+each other, and a parameter or field type may name a struct declared later.
+Name resolution must accept all four; write a test for each.
 
 ### Where `print` lives
 
-What the documents say: the [tour](../../language-tour/04-variables-and-types.md)
-calls `print` "the built-in `print` function", and the [types
-chapter](../../specification/types-and-values.md) mentions it among
-supported functions. No chapter says which scope holds it. Nothing in any
-Vortex program declares it, yet every example uses it, so name resolution
-must find it somewhere.
+Nothing in a Vortex program declares `print`, yet every example uses it, so
+name resolution must find it somewhere.
+[Programs and declarations 3.9](../../specification/declarations.md#39-built-in-functions)
+says where ([decision](../../decisions/program.md#d4)): `print` lives in a
+built-in scope that surrounds the program scope, and name resolution looks
+there after the program scope. No program may declare a function, struct,
+parameter, local variable or loop variable named `print`; each such
+declaration is a name error, like any other clash
+([record 2](../../decisions/names.md#d2),
+[record 5](../../decisions/names.md#d5)).
 
-The decision must settle:
-
-- which scope `print` belongs to (for example, an implicit scope outside the
-  program scope, or the program scope itself);
-- whether a program may declare its own function called `print`, and if so
-  whether that is a duplicate or hides the built-in one;
-- whether a local variable may be called `print`.
-
-Cast-shaped calls such as `f32(count)` are a different case. `f32` is a
-keyword, not a name, so it never needs a lookup. (How the grammar admits a
-keyword in that position is an open question noted on the
-[parser page](stage-3-parser-and-tree.md#places-where-the-grammar-needs-care).)
+Casts such as `f32(count)` are a different case. `f32` is a keyword, not a
+name, and the grammar gives casts their own production, so a cast never needs
+a lookup ([decision](../../decisions/numbers.md#d1)).
 
 ### A struct and a function with the same name
 
-What the documents say: the program scope holds both function and struct
-names. The [grammar](../../specification/grammar.md#struct-definitions-and-fields)
-says "Struct names must not conflict with another declaration in the same
-scope." The [structs chapter](../../specification/structs.md#81-declaration)
-says a struct declaration "introduces the struct name into program type
-scope", a phrase that hints at a separate scope just for types.
+The rule: functions, structs and `print` share one namespace
+([decision record](../../decisions/names.md#d5)). `struct Point` and
+`fn Point` in one program are duplicates, reported at the later declaration,
+and no top-level declaration may be named `print`. The
+[structs chapter](../../specification/structs.md#81-declaration) now puts
+struct names in the program scope, not a separate type scope. Because Vortex
+has no shadowing, a local variable cannot reuse a struct's name either.
 
-Read together, the first two say `struct Point` and `fn Point` clash. The
-third leaves room for them not to. The decision must settle whether types
-and functions share one set of top-level names, and whether a local variable
-may reuse a struct's name.
+```vortex
+// items: name error
+struct Point {
+    x: f32,
+}
+
+fn Point() {} // name error: Point is already declared
+```
 
 ## Names that wait for types
 
@@ -472,34 +477,37 @@ object type". Leave field access alone at this stage, apart from resolving
 the name on the left of the dot.
 
 **Struct expressions.** In `Point { x: 1.0, y: 2.0 }`, the struct name is
-resolved here like any other use, and it must lead to a struct. Once it does,
-the field names `x` and `y` can be checked against that struct's declaration
-without knowing any other types. The [structs
-chapter](../../specification/structs.md#83-struct-construction) says "Name
-and type checking" must require that every field appears exactly once and no
-unknown field appears. It does not say which of the two stages does it, so
-either is acceptable, as long as it is done once.
+resolved here like any other use; an unknown name is a name error. The
+[structs chapter](../../specification/structs.md#83-struct-construction) makes
+every other mistake in a struct expression a type error: a name that leads to
+something other than a struct, and a missing, unknown or repeated field
+([decision](../../decisions/operators.md#d7)).
+[Stage 5](stage-5-types-and-rules.md) reports those, because it has the
+struct's type.
 
 **Field names never clash with locals.** A field is not a variable. The tour
-is explicit that a field "is not placed in local or top-level value scope".
-So a struct with a field `x` and a function with a local `x` are unrelated.
-Inside one struct, though, field names must be unique:
+is explicit that a field "is not placed in a local scope or in the program
+scope". So a struct with a field `x` and a function with a local `x` are
+unrelated. Inside one struct, though, field names must be unique:
 
 ```vortex
+// items: name error
 struct Invalid {
     value: i32,
-    value: f32, // invalid: duplicate field name
+    value: f32, // name error: duplicate field name
 }
 ```
 
 **The right kind of thing.** Finding a declaration is not always enough. A
 written type such as `point: Point` must lead to a struct, since structs are
 the only user-defined types in v0.1. A call such as `shift(start, 0.5)` must
-lead to something callable. The grammar points out that `Point(0.0, 0.0)` is
-"a call, not struct construction", so a struct name followed by `(` is found
-by lookup and then rejected because a struct is not a function. Record the
-kind of each declaration in this stage so the check is possible, whether it
-is reported here or in stage 5.
+lead to something callable. The grammar points out that `Point(0.0, 0.0)`
+"parses as a call", so a struct name followed by `(` is found by lookup and
+then rejected because a struct is not a function. Record the kind of each
+declaration in this stage. Stage 5 reports a mismatch as a type error
+([decision](../../decisions/operators.md#d7)): a struct or variable used as a
+callee, a function or variable used as a type or as a struct-expression name,
+and a function or struct used as a value.
 
 ## Exactly one main
 
@@ -510,6 +518,7 @@ exactly one function named `main`, with no parameters, returning `void`
 either by leaving out the return type or by writing `-> void`.
 
 ```vortex
+// program: valid
 fn main() {
     print("ready");
 }
@@ -520,13 +529,17 @@ of helper functions parses fine but is not an executable). A `main` with
 parameters or a non-`void` return type. And a file with two functions named
 `main`, which is also a plain duplicate in the program scope.
 
-That last case is a small trap. The same mistake breaks two rules, and a
-careless compiler reports it twice. Pick one clear message. Note also that
-the [diagnostics chapter](../../specification/diagnostics.md#semantic-error)
-files "an invalid `main` signature" under semantic errors, not name errors.
-That is not a contradiction. The chapter says plainly that category and the
-pass that detects the problem "are related but not identical". The check can
-run here while its message says what the user needs to know.
+That last case is a small trap: the same mistake breaks two rules, and a
+careless compiler reports it twice. The rule is to report it once, as the
+ordinary duplicate-declaration name error at the second `main` with a note at
+the first, and to skip the entry-point check for it
+([decision](../../decisions/program.md#d6)). The other two cases are one
+semantic error each: a missing `main` is reported at line 1, column 1, and a
+wrong signature at the `main` declaration. A semantic error found in the names
+stage is not a contradiction; the
+[diagnostics chapter](../../specification/diagnostics.md#103-error-phase-versus-category)
+says category and detecting pass "are related but not identical". Calls to
+`main` need no check: `main` is an ordinary function in every other way.
 
 ## What you need to have
 
@@ -539,17 +552,21 @@ run here while its message says what the user needs to know.
   parameters, fields, locals, loop variables.
 - Scopes that nest exactly as blocks nest, with the loop variable limited to
   the loop body.
-- A local that becomes visible at its declaration, not before.
+- A local that becomes visible only after its complete declaration,
+  initializer included.
 - Every name use and named type linked to one declaration: later stages
   depend on it.
+- Every top-level function and struct visible in the whole file, above and
+  below its declaration.
 - Unknown-name errors, pointing at the use.
 - Duplicate-name errors in every kind of scope, pointing at the second
   declaration with a note at the first.
 - Out-of-scope errors, such as a use after the block ends.
 - The kind of each declaration recorded, so "not a struct" and "not callable"
-  can be checked.
+  can be checked in stage 5.
 - The `main` check: exactly one, no parameters, `void`.
-- A written decision on each open rule above, and tests that follow it.
+- Name errors for every declaration that reuses a visible name, and tests for
+  each naming rule above.
 - Tests pairing each rejected program with its nearest accepted one.
 
 </div>
@@ -560,8 +577,10 @@ run here while its message says what the user needs to know.
 - Types of anything, including which field `end.x` means: stage 5.
 - Mutability, such as assigning to a `let` without `mut`: stage 5.
 - `break` and `continue` outside loops: stage 5 semantic checks.
-- Array dimensions, even when they use names: resolve the names here,
-  evaluate them in stage 5.
+- Array dimensions, even when they use names: resolve the names here, so an
+  undeclared name is a name error; stage 5 then rejects any dimension that
+  uses a name, because v0.1 dimensions allow integer literals only
+  ([decision](../../decisions/arrays.md#d11)).
 - How long values live and where they are stored: reference rules are
   stage 5, memory layout is stage 8.
 - Modules, imports, overloading, methods, generics: outside v0.1 entirely.
@@ -585,31 +604,41 @@ compiler concepts." This stage is about visibility only.
 "when every name in a program resolves to one known declaration". In
 practice:
 
-- every valid example in the spec and the tour resolves with no errors, and
-  you can print, for any use, which declaration it was linked to;
+- every example in the spec and the tour labelled `valid` resolves with no
+  errors, and you can print, for any use, which declaration it was linked to
+  ([decision 28](../../decisions/documentation.md#d28));
 - `print(missing_value);` in `main` is rejected with a name error at
   `missing_value`;
 - the tour's `print(inside);` after the block is rejected;
 - duplicate locals, parameters, fields and top-level functions are each
   rejected, with the second declaration marked;
-- a file with no `main`, two `main` functions, `fn main(arguments: String)`
-  or `fn main() -> i32` is rejected, once per mistake;
-- the shadowing decision is written down and the roadmap's shadowing tests
-  follow it;
+- a file with no `main`, `fn main(arguments: String)` and `fn main() -> i32`
+  each give one semantic error, and a file with two `main` functions gives one
+  name error, at the second;
+- an inner local, a parameter or a loop variable that reuses a visible name,
+  and a local named like a top-level declaration or `print`, are each rejected
+  with a name error at the new declaration;
+- a call to a function declared later, a recursive function, two functions
+  that call each other, and a field whose type is a struct declared later all
+  resolve;
+- `struct Point` beside `fn Point`, and a top-level `fn print`, are each
+  rejected with a name error;
 - the parser tests from [stage 3](stage-3-parser-and-tree.md) still pass, and
-  `let value: MissingType = unknown_name + true;` now fails here, with two
-  name errors, and not in the parser.
+  `let value: MissingType = unknown_name + true;`, written inside `main`, now
+  fails here, with two name errors, and not in the parser.
 
 ## Traps
 
 **Resolving in the parser.** It feels efficient to check names while the tree
 is being built. It breaks the stage boundary the architecture sets, and it
-makes top-level order matter whether or not the language decides it should.
+makes top-level order matter, which the language rules out: a top-level name
+may be used above its declaration.
 
-**Guessing the open rules.** When the spec is silent, it is tempting to copy
-the language you know best. Languages differ here, and more than one choice
-is defensible. Vortex's rule must be written in the spec, so that
-tests and users can rely on it.
+**Copying another language's shadowing rule.** Rust lets a new `let` shadow
+an old one, and Go lets an inner block hide an outer name. Vortex allows
+neither. Follow the
+[declarations chapter](../../specification/declarations.md#36-scopes), where
+every naming rule this stage needs is written down.
 
 **Treating `.x` as a normal name.** Looking up `x` in the ordinary scopes
 will find the wrong thing, or nothing. A field is reached through a value's
@@ -623,7 +652,10 @@ types need resolving just as much as names in expressions do.
 there is no `total` declaration, and every later use of `total` becomes an
 unknown name. That is a cascade from the parser. Decide how this stage treats
 declarations the parser could not build, so the user sees the real error
-first.
+first. The suggested default,
+[implementation choice I11](../../decisions/implementation.md#i11), has the
+parser record such a declaration anyway, marked as broken, and this stage
+links each use of `total` to it without reporting anything.
 
 **Reporting at the wrong place.** A duplicate is reported at the second
 declaration, not the first. An unknown name is reported at the use, not at
@@ -645,9 +677,10 @@ whole program can be checked before it runs.
 **Crafting Interpreters, "Local Variables".** The second implementation
 resolves local names while compiling, and allows two variables with the same
 name in different scopes, reporting an error only for the same
-scope.[^ci-locals] That is one possible answer to Vortex's open shadowing
-question, not the answer. The chapter is also a good picture of scope depth:
-the global scope, the first block inside it, the block inside that.
+scope.[^ci-locals] Vortex answers the question differently: it also rejects
+the inner declaration, because the outer name is still visible there. The
+chapter is also a good picture of scope depth: the global scope, the first
+block inside it, the block inside that.
 
 **Kaleidoscope, chapter 3.** Kaleidoscope has no separate name pass. Variable
 names are looked up while generating code, and "Unknown variable name" is

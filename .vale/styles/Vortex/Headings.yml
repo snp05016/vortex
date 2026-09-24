@@ -3,15 +3,20 @@
 # word after a leading number is treated as the first word.
 extends: capitalization
 message: "Use sentence case for headings: '%s'."
-level: error
+# A warning, not an error: after a colon Vale expects a capital, while these
+# docs use both "Milestone 2: Lexer" and "Your turn: column sums".
+level: warning
 scope: heading
 match: $sentence
-# A capital is also fine right after a colon ("Milestone 2: Lexer").
+# A capital is also fine right after a colon ("Milestone 2: Lexer") and after
+# a chapter id ("O6. Redundancy", "A. The machine").
 indicators:
   - ":"
+  - "."
 # Proper nouns and acronyms used in docs/. Entries are regular expressions.
 exceptions:
   - AArch64
+  - AI
   - ABI
   - API
   - Apple
@@ -22,13 +27,17 @@ exceptions:
   # that merely contains an exception, so a bare "C" would let "Compiler" pass.
   - ^C(?:\+\+)?$
   - CFG
+  - CSE
   - Clang
   - CMake
   - CPUs?
   - CUDA
   - EBNF
   - FileCheck
+  - FLOP/s
+  - GB/s
   - GCC
+  - GVN
   - GPUs?
   - HIR
   - HTML
@@ -36,26 +45,33 @@ exceptions:
   - IDE
   - IEEE
   - IRs?
+  - ISAs?
   - JIT
   - Kaleidoscope
   - Linux
   - LL # as in "LL(1)"
   - LLMs?
   - LLVM
+  - LICM
   - macOS
   - Metal
   - MIR
   - MLIR
+  - ML
   - NaN
+  - NVIDIA
   - Nystrom
   - Pratt
+  - PRE
   - PTX
   - Python
   - README
   - RISC-V
   - Rust
   - SIMD
+  - SME
   - SPIR-V
+  - SROA
   - SSA
   - SVG
   - Unicode

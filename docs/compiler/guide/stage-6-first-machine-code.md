@@ -28,18 +28,21 @@ bullets:
 - generate CPU code for `main`, literals, arithmetic, variables and `return`;
 - emit an object file or executable using the chosen back end;
 - link the generated code with Vortex's small runtime;
-- run the generated program and capture its exit status and output.
+- run the generated program and capture its output and its exit status (0
+  when `main` returns).
 
 And one program that has to work:
 
 ```vortex
+// program: valid
 fn main() {
     let result = 2 + 3 * 4;
     print(result);
 }
 ```
 
-The milestone is complete when this compiles, runs, and prints `14`.
+The milestone is complete when this compiles, runs, prints `14`, and exits
+with status 0.
 
 The [architecture page](../architecture.md) gives the lowering pass one
 firm rule. Its input is a "validated program", and it must not "accept
@@ -199,7 +202,11 @@ has to be able to say a few things clearly:
 **Lowering** is the step that turns the checked tree into IR. In the tree for
 `2 + 3 * 4`, the multiplication sits below the addition. Nothing in the tree
 says "do the multiplication first"; that is implied by the shape. After
-lowering, the order is written out: multiply, then add, then store.
+lowering, the order is written out: multiply, then add, then store. When both
+operands of an operator need work, the language fixes which comes first: the
+left operand is evaluated before the right, so in `f() + g()` the call to `f`
+happens first ([decision 38](../../decisions/statements.md#d38)). Lowering
+writes the steps in that order.
 
 The only facts lowering needs are ones earlier stages already worked out. The
 parser decided the shape, name resolution connected `result` in `print(result)`
@@ -207,10 +214,14 @@ to its declaration, and type checking decided that every value in the line is
 an `i32`. Lowering reads those answers. It does not make up new ones.
 
 The same rule covers floating-point values. The
-[types chapter](../../specification/types-and-values.md) says the compiler
-"must not silently enable transformations that change specified floating-point
-results". Whatever back end you choose, if it has settings that let it
-rearrange floating-point arithmetic for speed, those settings stay off.
+[types chapter](../../specification/types-and-values.md#44-floating-point-values)
+requires each `f32` or `f64` operation to be one IEEE 754 operation, rounded
+to nearest with ties to even: no fused multiply-add, no reordering, no extra
+precision and no flush-to-zero ([decision](../../decisions/numbers.md#d56)).
+Whatever back end you choose, every setting that relaxes one of those stays
+off. Floating-point division needs no check: dividing by zero gives an
+infinity or NaN, as IEEE 754 specifies
+([decision 24](../../decisions/numbers.md#d24)).
 
 ## Choosing a back end
 
@@ -256,8 +267,15 @@ happens to mean for similar-looking code. Vortex's rules on integer overflow,
 division and conversions are strict (see the
 [runtime and numerical rules](../../language-tour/06-runtime-and-numerical-rules.md)),
 so the generated code must spell out those checks itself rather than
-inheriting C's behavior for its operators. Errors from the C compiler, if any
-slip through, will talk about generated C lines, not Vortex lines. And you now
+inheriting C's behavior for its operators. The same goes for floating point:
+by default
+[GCC](https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html#index-ffp-contract)
+fuses `a * b + c` into one fused multiply-add outside strict ISO modes, and
+[Clang](https://clang.llvm.org/docs/UsersManual.html#cmdoption-ffp-contract)
+does so within an expression, so compile the generated C with contraction off,
+for example `-ffp-contract=off`, and without fast-math options. Errors from the
+C compiler, if any slip through, will talk about generated C lines, not Vortex
+lines. And you now
 depend on a C compiler being present at every use of `vortex`.
 
 ### Generating assembly directly
@@ -288,7 +306,9 @@ v0.1, and it is not a reason to pick any option above today.
 
 Whichever option wins, the decision record should answer:
 
-- which processors and operating systems v0.1 supports;
+- which processors and operating systems v0.1 supports, all of them 64-bit,
+  since `usize` is 64 bits on every v0.1 target
+  ([decision 42](../../decisions/numbers.md#d42));
 - whether the compiler writes an object file and calls a system linker, or
   produces the executable itself;
 - which outside tools must be installed, and how the one-command build and
@@ -297,6 +317,16 @@ Whichever option wins, the decision record should answer:
 - how the choice leaves room for the later GPU path the architecture page
   requires;
 - how floating-point settings are pinned so results match the spec.
+
+The choice itself stays yours:
+[implementation choice I1](../../decisions/implementation.md#i1) prefers no
+back end. As a default, it suggests that the written decision show five
+things: each `f32` and `f64` operation is one IEEE 754 operation, with
+contraction and fast-math options off; a program exits with status 0 when
+`main` returns and with 101 after a runtime error; only 64-bit targets are
+supported; Milestone 0's one command still builds and tests the project from a
+fresh copy; and the targets and back end are listed among the
+implementation-defined behaviors.
 
 ## SSA, if you use LLVM
 
@@ -349,7 +379,7 @@ writes the executable.
 <figure class="vx-figure">
 <svg viewBox="0 0 760 260" role="img" aria-labelledby="t6-link-title t6-link-desc">
 <title id="t6-link-title">From source file to printed output</title>
-<desc id="t6-link-desc">At compile time a source file goes into the Vortex compiler, which writes an object file. At link time the linker joins the object file with the runtime library to make an executable. At run time the executable prints 14 to standard output and ends with an exit status.</desc>
+<desc id="t6-link-desc">At compile time a source file goes into the Vortex compiler, which writes an object file. At link time the linker joins the object file with the runtime library to make an executable. At run time the executable prints 14 to standard output and ends with exit status 0.</desc>
 <text class="vx-text-muted" x="20" y="30">compile time</text>
 <text class="vx-text-muted" x="470" y="30">link time</text>
 <text class="vx-text-muted" x="610" y="30">run time</text>
@@ -370,7 +400,7 @@ writes the executable.
 <text class="vx-text-muted" x="520" y="213" text-anchor="middle">print, program start</text>
 <rect class="vx-box" x="610" y="170" width="130" height="56" rx="4"/>
 <text class="vx-mono" x="675" y="194" text-anchor="middle">14</text>
-<text class="vx-text-muted" x="675" y="213" text-anchor="middle">plus an exit status</text>
+<text class="vx-text-muted" x="675" y="213" text-anchor="middle">plus exit status 0</text>
 <line class="vx-line" x1="130" y1="85" x2="147" y2="85"/>
 <polygon class="vx-arrowhead" points="147,80 155,85 147,90"/>
 <line class="vx-line" x1="295" y1="85" x2="312" y2="85"/>
@@ -428,25 +458,24 @@ they are checked once and tested directly. A runtime that starts making
 decisions about Vortex semantics becomes a second, untested implementation of
 the language.
 
-### Two open decisions that affect the first test
+### Two decisions that affect the first test {#two-open-decisions-that-affect-the-first-test}
 
-The Milestone 6 test compares output and exit status, and the docs do not yet
-fix either.
+The Milestone 6 test compares output and exit status, and both are now fixed.
 
-**What `print` writes.** No specification chapter defines `print`. The types
-chapter mentions it only as one of the "supported functions such as `print`".
-Before the test can compare output, someone has to decide what `print(14)`
-writes: the characters `14` alone, or `14` followed by a line break, and how
-other values will be formatted later.
+**What `print` writes.**
+[Programs and declarations 3.9](../../specification/declarations.md#39-built-in-functions)
+defines `print` ([decision](../../decisions/program.md#d4)): it writes its
+arguments to standard output with one space between them and a line feed after
+the last. So `print(14)` writes three bytes: `1`, `4` and a line feed.
 
-**What exit status a Vortex program returns.** `main` returns `void`, and the
-roadmap asks the test to "capture its exit status" without saying what the
-status should be. The decision should say what a program that finishes
-normally returns, and what a program stopped by a runtime error returns, so
-that stage 9's tests can tell the two apart.
+**What exit status a Vortex program returns.** A program whose `main` returns
+exits with status 0, and a program stopped by a runtime error exits with 101
+([Diagnostics 10.6](../../specification/diagnostics.md#106-runtime-reporting),
+[decision](../../decisions/program.md#d14)), so stage 9's tests can tell the
+two apart.
 
-Both are small choices. Both must be written down before the first end-to-end
-test can be called correct.
+With both written down, the first end-to-end test has an exact expected
+result.
 
 ## Many small passes
 
@@ -476,17 +505,21 @@ runtime, runs the result, and compares the output with the expected
 string, failing if any step fails.[^ghuloum] A Vortex version of that test for
 the roadmap program checks, in order:
 
-1. the compiler accepts the program and writes its output file;
+1. the compiler, run as `vortex <source> -o <path>`, accepts the program and
+   exits with status 0 ([decision 20](../../decisions/program.md#d20));
 2. the link step succeeds and produces an executable;
-3. the executable runs and writes exactly the agreed output for `14`;
-4. the exit status is the agreed value for a normal finish.
+3. the executable runs and writes exactly `14` and a line feed to standard
+   output;
+4. the exit status is 0.
 
 Two more tests belong next to it. One compiles a program that stage 5 rejects
-and checks that no executable appears, which is the architecture page's
-lowering rule made visible. The other is the smallest possible program, an
-empty `main`, which checks that start-up and exit work with nothing in between.
+and checks for exit status 1 and no executable, which is the architecture
+page's lowering rule made visible. The other is the smallest possible program,
+an empty `main`, which checks that start-up and exit work with nothing in
+between: it writes nothing and exits with status 0.
 
 ```vortex
+// program: valid
 fn main() {
 }
 ```
@@ -507,11 +540,12 @@ fn main() {
 - An object file or executable written by the compiler.
 - A runtime with program start-up and `print` for `i32`.
 - A link step that joins them into an executable.
-- Written decisions on what `print` outputs and what exit status a program
-  returns.
+- A runtime `print` for `i32` that follows the written format, and exit
+  status 0 when `main` returns.
 - An end-to-end test that compiles, links, runs, and compares output and exit
   status for the roadmap program.
-- A test showing that a rejected program produces no executable.
+- A test showing that a rejected program exits with status 1 and produces no
+  executable.
 
 </div>
 <div class="vx-not-yet" markdown="1">
@@ -522,8 +556,8 @@ fn main() {
   are [stage 7](stage-7-functions-and-control-flow.md).
 - Arrays, strings, structs and references in generated code: these are
   [stage 8](stage-8-data-in-memory.md).
-- Runtime checks for overflow, division by zero and bounds: these are
-  [stage 9](stage-9-runtime-safety.md).
+- Runtime checks for integer overflow, integer division by zero and bounds:
+  these are [stage 9](stage-9-runtime-safety.md).
 - Optimization of any kind: the roadmap puts it after v0.1.
 - Debug information, which Kaleidoscope adds in chapter 9:[^kal9] no milestone
   asks for it.
@@ -547,15 +581,18 @@ that handles many constructs without ever producing a running executable.
 
 The roadmap's condition for
 [Milestone 6](../../roadmap.md#milestone-6-basic-cpu-code-generation) is that
-the first program "compiles, runs, and prints `14`". Behind that sentence sit
+the first program "compiles, runs, prints `14`, and exits with status 0".
+Behind that sentence sit
 the roadmap's general rules for every milestone: the project builds from a
 clean configuration, every test passes, and "the AST or generated output is
 stable enough to inspect". So:
 
-- the roadmap program produces the agreed output and exit status;
-- the back-end, `print` and exit-status decisions are written down;
+- the roadmap program writes `14` and a line feed, and exits with status 0;
+- the back-end decision is written down, and the output and exit status
+  follow the `print` and exit-status rules;
 - the generated IR or assembly for the test program can be printed and read;
-- a rejected program produces a diagnostic and no executable;
+- a rejected program produces a diagnostic on standard error, exit status 1
+  and no executable;
 - every test from milestones 0 to 5 still passes.
 
 ## Traps
@@ -589,8 +626,9 @@ decide how Vortex values convert or when an operation is legal. Those rules
 live in the compiler.
 
 **Turning on optimizer settings by accident.** Some back ends optimize by
-default. Any setting that allows floating-point arithmetic to be rearranged
-breaks the spec's rule on floating-point results.
+default, and C compilers may fuse a multiply and an add unless told not to.
+Any setting that fuses, reorders or widens floating-point arithmetic, or
+flushes tiny values to zero, breaks the spec's rule on floating-point results.
 
 ## How others teach this stage
 

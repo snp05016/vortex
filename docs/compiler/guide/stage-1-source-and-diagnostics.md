@@ -41,11 +41,14 @@ rely on it.
 source file
 : The file of Vortex text the user hands to the compiler. The
   [conformance chapter](../../specification/conformance.md#12-programs) defines
-  it as "a sequence of source characters provided to the compiler".
+  it as "a sequence of bytes provided to the compiler", which must be valid
+  UTF-8.
 
 character
 : One symbol of text as a person would count it: a letter, a digit, a space, a
-  `λ`.
+  `λ`. When Vortex counts columns, a character is one Unicode scalar value (one
+  numbered Unicode character), so a letter written as a base letter plus a
+  separate accent mark counts as two.
 
 byte
 : The unit a file is actually stored in. A byte can hold one of 256 values.
@@ -58,21 +61,23 @@ encoding
   four.
 
 offset
-: A position in the file counted from the start: "the 28th character". Simple
-  for a program to store and compare, useless for a person to find.
+: A position in the file, given as the number of bytes before it: "28 bytes
+  in". Simple for a program to store and compare, useless for a person to find.
 
 line and column
 : A position a person can find. The line is which row of the file; the column
-  is how far along that row.
+  is how far along that row. Both are counted from 1.
 
 source span
-: A stretch of source text, given as a start position and a length. The
-  [glossary](../../specification/glossary.md) uses exactly this definition.
-  Every token, every tree node and every error message carries one.
+: A stretch of source text, given as a start offset and a length, both in
+  bytes. The [glossary](../../specification/glossary.md) uses exactly this
+  definition. Every token, every tree node and every error message carries one.
 
 diagnostic
-: A message from the compiler about a problem in the source. In Vortex v0.1
-  every diagnostic is an error; the specification defines no warnings.
+: A message from the compiler about a problem in the source. The
+  specification requires only errors. A compiler may add warnings, which point
+  out likely mistakes but never reject a program
+  ([Diagnostics 10.1](../../specification/diagnostics.md#101-required-diagnostic-data)).
 
 category
 : The kind of problem a diagnostic reports, such as a lexical error or a type
@@ -102,9 +107,11 @@ tokens".
 
 The file might not be readable at all. The path might be wrong, or the file
 might be a folder. That is a problem with the command, not with the Vortex
-program, so it has no line or column. It still needs a clear message and a
-failing exit status. Decide how it looks, and keep it visibly different from a
-diagnostic about the source.
+program, so it has no line or column. It still needs a clear message on
+standard error and exit status 2, the status the
+[command-line decision](../../decisions/program.md#d20) gives to problems
+outside the source program. Decide how the message looks, and keep it visibly
+different from a diagnostic about the source.
 
 An empty file is not an error at this stage. The
 [conformance chapter](../../specification/conformance.md#12-programs) says an
@@ -117,8 +124,8 @@ executable needs a `main` function. That failure is reported much later, by
 A file on disk is a row of bytes, not a row of characters. For plain English
 text the two are the same length, which makes it easy to forget they are
 different things. Vortex will not let you forget for long, because the
-specification allows non-ASCII characters inside character and string
-literals. Its own example is `'λ'`.
+specification allows non-ASCII characters inside comments and inside character
+and string literals. Its own example is `'λ'`.
 
 <figure class="vx-figure">
 <svg viewBox="0 0 760 270" role="img" aria-labelledby="bytes-title bytes-desc">
@@ -219,39 +226,43 @@ literals. Its own example is `'λ'`.
 <figcaption>Figure 1. The same line counted two ways. The highlighted character, the Greek letter lambda, is one character but two bytes in UTF-8, so every column after it differs by one depending on what you count.</figcaption>
 </figure>
 
-The specification does not say which encoding a Vortex source file uses. It
-says that `String` values hold UTF-8 text, and the
-[language tour](../../language-tour/04-variables-and-types.md) notes that a
-character "is not always one byte". It does not say what encoding the file
-itself must be in. This is an open decision, and it has to be made at this
-stage, because everything about positions depends on it. The decision must
-settle:
+Which encoding the file itself is in used to be an open question. The
+[lexical structure chapter](../../specification/lexical-structure.md#source-encoding)
+now settles this ([decision 15](../../decisions/lexical.md#d15)): a source file
+must be UTF-8, and bytes that are not valid UTF-8 are a lexical error at their
+position. A few more rules come with it:
 
-- which encoding source files are read in (UTF-8 is the obvious candidate,
-  since `String` already uses it);
-- what happens when the file contains bytes that are not valid in that
-  encoding: a lexical error at that position is the natural answer, but it
-  should be written down;
-- whether columns count characters or bytes, and so what column number
-  Figure 1's semicolon is reported at;
-- whether a byte order mark (an invisible marker some editors put at the start
-  of a file) is allowed.
+- a byte order mark (an invisible marker some editors put at the start of a
+  file) is ignored when it is the first character of the file, and takes no
+  column; anywhere else it is an error;
+- control characters other than tab, line feed and carriage return are errors,
+  even inside a comment or a literal;
+- a carriage return must be followed by a line feed.
 
-For most test files the choice changes nothing, because most test files are
-plain ASCII. That is exactly why it needs a test of its own.
+This stage, where bytes become characters, is the natural place to find
+invalid UTF-8, but the diagnostic's category is still lexical error. The other
+rules are checked by the lexer in [stage 2](stage-2-lexer.md).
+
+Columns count characters, so Figure 1's semicolon is reported at column 12,
+while spans keep byte offsets
+([Conformance 1.7](../../specification/conformance.md#17-source-locations),
+[decision 16](../../decisions/diagnostics.md#d16)).
+
+For most test files these rules change nothing, because most test files are
+plain ASCII. That is exactly why they need tests of their own: one file with
+bytes that are not valid UTF-8, and one that starts with a byte order mark.
 
 ## Positions and spans
 
 Inside the compiler, the simplest way to name a place is an offset: how many
-characters, or bytes, come before it. A span is then an offset and a length.
-People need something else. They need a file name, a line, and a column. The
-compiler has to be able to turn one into the other whenever a message is
-printed.
+bytes come before it. A span is then an offset and a length. People need
+something else. They need a file name, a line, and a column. The compiler has
+to be able to turn one into the other whenever a message is printed.
 
 <figure class="vx-figure">
 <svg viewBox="0 0 760 300" role="img" aria-labelledby="span-title span-desc">
 <title id="span-title">A source span inside one line</title>
-<desc id="span-desc">Line 2 of a small file is drawn as thirty character cells. The cells from column 17 to column 30, holding an unterminated string, are outlined. The span starts at offset 28, which is line 2, column 17, and is 14 characters long.</desc>
+<desc id="span-desc">Line 2 of a small file is drawn as thirty character cells. The cells from column 17 to column 30, holding an unterminated string, are outlined. The span starts at offset 28, which is line 2, column 17, and is 14 bytes long.</desc>
 <text class="vx-text-muted" x="10" y="46">line 1</text>
 <text class="vx-mono" x="56" y="46">fn main() {</text>
 <text class="vx-text-muted" x="10" y="106">line 2</text>
@@ -300,8 +311,8 @@ printed.
 <text class="vx-text-muted" x="556" y="188" text-anchor="middle">starts at offset 28, length 14</text>
 <text class="vx-text-muted" x="10" y="216">line 3</text>
 <text class="vx-mono" x="56" y="216">}</text>
-<text class="vx-text-muted" x="10" y="258">Offset 28 means 28 characters come before the opening quote in the whole file:</text>
-<text class="vx-text-muted" x="10" y="278">12 on line 1 (11 plus a one-character line break) and 16 on line 2. As a line and column, that is 2:17.</text>
+<text class="vx-text-muted" x="10" y="258">Offset 28 means 28 bytes come before the opening quote in the whole file:</text>
+<text class="vx-text-muted" x="10" y="278">12 on line 1 (11 plus a one-byte line break) and 16 on line 2. As a line and column, that is 2:17.</text>
 </svg>
 <figcaption>Figure 2. A span inside one line of a three-line file. The outlined cells are the unterminated string the specification uses as its example of a lexical error. The compiler can store the span as an offset and a length, and turn it into "line 2, column 17" only when it prints a message.</figcaption>
 </figure>
@@ -312,30 +323,28 @@ requires a "lexical error at the unterminated string". Notice where the span
 ends. A string in Vortex cannot contain a line break, so an unterminated
 string stops at the end of its line, and the span stops there too.
 
-Several small questions hide inside "line and column", and each needs one
-answer, written down and tested.
+Several small questions hide inside "line and column".
+[Conformance 1.7](../../specification/conformance.md#17-source-locations) now
+answers each one, and each answer still needs a test.
 
-**Where counting starts.** Lines and columns can be counted from 0 or from 1.
-Most people expect the first line of a file to be line 1. Whatever you choose,
-offsets and printed positions must agree, and so must every test.
+**Where counting starts.** Lines and columns count from 1, as most people
+expect of the first line of a file. Offsets are for the compiler, not for
+people: the first byte of the file has 0 bytes before it, so its offset is 0.
 
-**What a line break is.** The specification says line breaks separate tokens,
-but not which characters make one. Files written on Windows usually end each
-line with two characters (carriage return, then line feed); files written
-elsewhere use one. If the compiler counts both as characters in the line, every
-column at the end of a line can come out one too high, and offsets shift as in
-Figure 2's caption. Decide whether the two-character form is accepted, and
-count it as one line break if it is.
+**What a line break is.** A line feed, or a carriage return followed by a line
+feed. Files written on Windows usually end each line with the pair; files
+written elsewhere use a line feed alone. The pair counts as one break, so no
+column comes out one too high, and a carriage return on its own is a lexical
+error. Offsets still count both bytes of the pair.
 
-**What a tab is worth.** The specification allows tabs as whitespace. A tab is
-one character, but an editor shows it several columns wide. If the compiler
-reports the column as a character count, that is simple and exact, but a
-marker printed under the line has to account for tabs or it will point at the
-wrong place.
+**What a tab is worth.** One column. An editor shows a tab several columns
+wide, so a marker printed under the line must copy the tab, or widen it the
+same way the quoted line is shown, to land under the right character; that is
+presentation, not position.
 
-**Where the end of the file is.** Some errors happen at the very end, such as a
-string still open when the file runs out. The end of the file needs a position
-too, even if the last line has no line break after it.
+**Where the end of the file is.** A position like any other: its offset is the
+file's length in bytes, even when the last line has no line break. Some errors
+happen there, such as a string still open when the file runs out.
 
 The [conformance chapter](../../specification/conformance.md#17-source-locations)
 adds one more rule that later stages will lean on. The span of a larger piece
@@ -403,7 +412,11 @@ unfinished, it will meet source it recognizes but cannot yet handle. The
 [conformance chapter](../../specification/conformance.md#13-implementation-conformance)
 says it should then report an explicit "not implemented" diagnostic, and that
 crashing or silently skipping the construct is not acceptable. Having the
-category from the start makes that honest answer the easy one.
+category from the start makes that honest answer the easy one. Later the
+category gains a second use: a running program that exceeds a documented limit
+of the implementation, such as its stack size, stops with an
+implementation-limit report ([stage 9](stage-9-runtime-safety.md),
+[record 46](../../decisions/diagnostics.md#d46)).
 
 The specification also asks that a diagnostic describe the language rule that
 was broken, "rather than forcing users to understand the compiler pass that
@@ -411,12 +424,21 @@ happened to detect it". A user who writes `let value: bool = 10;` should read
 about a `bool` and an integer, not about the internals of a type checker.
 
 The exact wording and layout are left open. The specification calls exact
-prose an implementation detail. So the decisions for Vortex are these: the
-order of the parts, how a location is written, how the category is shown, a
-house style for message text, and how notes and related spans appear. Figure 3
-shows one answer. It borrows its layout from Rust's compiler, whose developer
-guide describes the same parts under the names level, message, primary span,
-secondary span and sub-diagnostic.[^rustc-diag]
+prose an implementation detail. So the decisions for your compiler are these:
+the order of the parts, how a location is written, how the category is shown,
+a house style for message text, and how notes and related spans appear.
+Figure 3 shows one answer. It borrows its layout from Rust's compiler, whose
+developer guide describes the same parts under the names level, message,
+primary span, secondary span and sub-diagnostic.[^rustc-diag]
+
+Where diagnostics go is not open: the `vortex` command writes them to standard
+error, keeps standard output for the `--tokens` and `--ast` printouts, and
+exits with status 1 when the source has any error
+([decision](../../decisions/program.md#d20)). A suggested layout is recorded
+as an implementation choice ([I2](../../decisions/implementation.md#i2)). It
+is closer to Clang's than to Figure 3: a header line
+`<file>:<line>:<column>: error[<category>]: <message>`, then the source line as
+written, with a row of `^` under the primary span.
 
 ## Showing the source line
 
@@ -441,6 +463,11 @@ A few cases need a decision:
   character;
 - a very long line: whether to show it whole or trim it around the span.
 
+The suggested default in [I2](../../decisions/implementation.md#i2) answers
+the first three: mark a span over several lines on its first line only, make
+every marker at least one `^` wide, and copy the tabs before the span into the
+marker line.
+
 ## Testing it before there is a lexer
 
 The roadmap says this stage is complete "when the compiler can report a
@@ -464,14 +491,19 @@ run anything.
 
 #### Need to have
 
-- Reading a file given on the command line, with a clear message when it
-  cannot be read.
+- Reading a file given on the command line, with a clear message and exit
+  status 2 when it cannot be read.
 - The whole source text kept unchanged until the compilation ends: every
   diagnostic may quote it.
 - A way to name any position and any span, including the end of the file.
 - Conversion from a position to file name, line and column.
-- Written decisions on encoding, counting from 0 or 1, line breaks, tabs, and
-  whether columns count characters or bytes.
+- UTF-8 decoding as the
+  [lexical structure chapter](../../specification/lexical-structure.md#source-encoding)
+  requires: invalid UTF-8 reported as a lexical error, and a leading byte order
+  mark skipped.
+- Positions exactly as Conformance 1.7 defines them: byte offsets, lines and
+  columns from 1, columns counted in characters, CR LF as one line break, a
+  tab as one column.
 - One diagnostic format with every part the
   [specification](../../specification/diagnostics.md#101-required-diagnostic-data)
   requires, used by every stage.
@@ -491,7 +523,9 @@ run anything.
 - Suggested fixes: they need a compiler that understands the program.
 - Error codes with long explanations: useful once there are many messages.
 - Machine-readable output for editors: nothing in v0.1 asks for it.
-- Warnings: the v0.1 specification defines only errors.
+- Warnings: the specification allows them but never requires them, and they
+  never change whether a program compiles
+  ([record 48](../../decisions/diagnostics.md#d48)).
 - Several source files or modules: modules come after v0.1.
 - Reports from a running program: runtime errors arrive in
   [stage 9](stage-9-runtime-safety.md).
@@ -512,15 +546,16 @@ The roadmap's condition is that "the compiler can report a readable error at an
 exact location in a source file". Read "exact" strictly. You are finished
 when:
 
-- the compiler reads a file given on the command line and reports clearly when
-  it cannot;
+- the compiler reads a file given on the command line, and gives a clear
+  message and exit status 2 when it cannot;
 - a diagnostic at a chosen position prints the right file name, line and column
   for ASCII text, non-ASCII text, tabs, both line-break styles, and the last
   line of a file with no final line break;
 - the printed source line is the line as written, and the marker sits under
   exactly the characters of the span;
-- the encoding, counting and line-break decisions are written down where a
-  reader of the docs can find them;
+- tests show positions following Conformance 1.7 in each of those cases;
+- a file with invalid UTF-8 gets a lexical error where the bad bytes are, and
+  a leading byte order mark shifts no column;
 - all of this runs as part of the one test command from
   [stage 0](stage-0-workbench.md).
 
@@ -528,8 +563,9 @@ when:
 
 **Counting bytes and calling them columns.** A compiler that counts bytes
 reports a column one or more too high after any non-ASCII character, and the
-marker lands on the wrong character. If you do count bytes, say so, and make
-the marker code agree with it.
+marker lands on the wrong character. Vortex columns count characters: keep
+offsets in bytes, and count characters only when you turn an offset into a
+column.
 
 **Two-character line breaks.** A file saved on Windows can make every position
 at the end of a line off by one. The bug only shows up for people who use
@@ -575,9 +611,10 @@ invalid-program folder from [stage 0](stage-0-workbench.md).
 shows the anatomy of a Rust diagnostic, part by part, and gives a style guide
 for message text: plain simple English, lowercase, no final full stop, and
 code names in backticks.[^rustc-diag] It also advises making the primary span
-as small as possible while still showing the problem. Vortex has not adopted
-any of these rules, but the guide is a good model of what a written-down house
-style looks like.
+as small as possible while still showing the problem. The specification adopts
+none of these rules; the suggested default in
+[I2](../../decisions/implementation.md#i2) follows its message style, and the
+guide is a good model of what a written-down house style looks like.
 
 **Crafting Interpreters, "Scanning".** Nystrom's scanner stores only a line
 number on each token and says that more careful implementations also keep the
