@@ -95,4 +95,7 @@ struct Token {
   TokenKind kind;
   SourceLocation location;
   const char *text; // pointer to the text of the token
+  std::string current_token_string() const {
+    return std::string(text, location.length);
+  }
 };

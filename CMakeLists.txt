@@ -10,6 +10,7 @@ add_library(vortex_compiler
     src/frontend/parser/parser_statements.cpp
     src/frontend/parser/parser_declarations.cpp
     src/frontend/parser/parser_types.cpp
+    src/frontend/parser/parser_expressions.h
     )
 target_include_directories(vortex_compiler PUBLIC src)
 target_compile_options(vortex_compiler PRIVATE -std=c++26)
