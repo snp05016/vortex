@@ -13,6 +13,8 @@ std::unique_ptr<Decl> Parser::parse_declaration() {
         throw std::runtime_error("Expected a declaration");
     }
 }
+
+// fn add(x:i32,y:i64) -> i32 { return x + y; }
 std::unique_ptr<Decl> Parser::parse_function_declaration() {
     Token function_token = peek();
     if (function_token.kind != TokenKind::KW_FN) {
@@ -68,7 +70,7 @@ std::unique_ptr<Decl> Parser::parse_function_declaration() {
             throw std::runtime_error("Expected return type after '->'");
         }
     } else {
-        return_type = std::make_unique<PrimitiveType>(function_token.location,
+        return_type = std::make_unique<PrimitiveType>(function_token.location, // if no return type is specified, defaulting to void
                                                       PrimitiveTypeKind::Void);
     }
     Token left_brace = peek();
@@ -94,5 +96,51 @@ std::unique_ptr<Decl> Parser::parse_function_declaration() {
         std::move(parameters), std::move(return_type), std::move(body));
 }
 std::unique_ptr<Decl> Parser::parse_struct_declaration() {
-    
+    Token struct_token = peek();
+    auto struct_token_location = struct_token.location;
+    if (struct_token.kind != TokenKind::KW_STRUCT) {
+        throw std::runtime_error("Expected a struct declaration");
+    }
+    advance(); // consume "struct".
+    Token name_token = peek();
+    if (name_token.kind != TokenKind::IDENTIFIER) {
+        throw std::runtime_error("Expected struct name after 'struct'");
+    }
+    std::string struct_name = name_token.current_token_string();
+    advance(); // consume the struct name.
+    if (!match(TokenKind::PUNC_LBRACE)) {
+        throw std::runtime_error("Expected '{' after struct name");
+    }
+    std::vector<StructFieldDecl> fields;
+    while (!check(TokenKind::PUNC_RBRACE)) {
+        if (check(TokenKind::EOF_TOKEN)) {
+            throw std::runtime_error("expected } after struct definitions");
+        }
+        Token curr_struct_field = peek();
+        if (curr_struct_field.kind != TokenKind::IDENTIFIER) {
+            throw std::runtime_error("expected a struct field name");
+        }
+        std::string field_name = curr_struct_field.current_token_string();
+        advance();
+        if (!match(TokenKind::PUNC_COLON)) {
+            throw std::runtime_error("expected ':' after struct field name");
+        }
+        auto field_type = parse_type();
+        if (!field_type) {
+            throw std::runtime_error("expected a type after struct field name");
+        }
+        fields.emplace_back(curr_struct_field.location, std::move(field_name),
+                            std::move(field_type));
+        if (!match(TokenKind::PUNC_COMMA) &&
+            !check(TokenKind::PUNC_RBRACE)) {
+            throw std::runtime_error("expected ',' or '}' after struct field");
+        }
+    }
+    advance(); // consume "}".
+    if (fields.empty()) {
+        throw std::runtime_error("structs cannot have zero fields");
+    }
+    return std::make_unique<StructDecl>(struct_token_location,
+                                        std::move(struct_name),
+                                        std::move(fields));
 }
