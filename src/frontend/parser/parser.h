@@ -19,6 +19,8 @@ class Parser {
   int min_precedence); // parses an expressi)on at a precedence floor.
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_statement();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_declaration();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_struct_declaration();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_function_declaration();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Type> parse_type();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_unary();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_primary();
