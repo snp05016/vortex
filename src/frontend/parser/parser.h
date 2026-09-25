@@ -13,20 +13,22 @@ class Parser {
     Parser(const char *source,
            std::size_t length); // constructs a parser for a source buffer.
     void parse();               // prints the tokens in the source buffer.
-    std::optional<Token> lookahead_;
-    std::unique_ptr<Expr> parse_expression();
-    std::unique_ptr<Expr> parse_binary_expression(
-        int min_precedence); // parses an expression at a precedence floor.
-    std::unique_ptr<Stmt> parse_statement();
-    std::unique_ptr<Decl> parse_declaration();
-    std::unique_ptr<Type> parse_type();
-    std::unique_ptr<Expr> parse_unary();
-    std::unique_ptr<Expr> parse_primary();
+    [[nodiscard("you prolly meant to use it")]]std::optional<Token> lookahead_;
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_expression();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_binary_expression(
+  int min_precedence); // parses an expressi)on at a precedence floor.
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_declaration();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Type> parse_type();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_unary();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_primary();
 
   private:
-    Token peek(); // returns the next token without consuming it.
+    inline Token peek(); // returns the next token without consuming it.
     Lexer lexer;
 
+    // this function checks if the next token is of the specified kind without consuming it.
+    // used for lookahead and conditional parsing.
     bool check(TokenKind kind) {
         Token tok = peek();
         return tok.kind == kind;
@@ -34,7 +36,7 @@ class Parser {
 
     bool match(TokenKind kind) {
         if (check(kind)) {
-            lookahead_.reset(); // consume the token.
+            advance(); // consume the token.
             return true;
         }
         return false;

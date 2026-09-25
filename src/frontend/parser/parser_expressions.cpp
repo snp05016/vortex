@@ -1,12 +1,9 @@
-#include "parser.h"
-
-#include <stdexcept>
-#include <string>
+#include "parser_expressions.h"
 
 namespace {
 
 // decodes the contents of a quoted string or character token.
-std::string decode_string_literal(const Token &token) {
+inline std::string decode_string_literal(const Token &token) {
     const std::string text = token.current_token_string();
     std::string value;
     value.reserve(text.size() - 2);
@@ -61,11 +58,11 @@ std::unique_ptr<Expr> Parser::parse_unary() {
         op = UnaryOp::Positive;
         break;
     case TokenKind::OP_BITWISE_AND: {
-        lookahead_.reset(); // consume "&".
+        advance(); // consume "&".
 
         if (peek().kind == TokenKind::KW_MUT) {
             op = UnaryOp::MutReference;
-            lookahead_.reset(); // consume "mut".
+            advance(); // consume "mut".
         } else {
             op = UnaryOp::Reference;
         }
@@ -81,7 +78,7 @@ std::unique_ptr<Expr> Parser::parse_unary() {
         return parse_primary();
     }
 
-    lookahead_.reset(); // consume the ordinary unary operator.
+    advance(); // consume the ordinary unary operator.
 
     auto operand = parse_unary();
     if (!operand) {
