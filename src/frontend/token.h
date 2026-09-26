@@ -72,7 +72,7 @@ enum class TokenKind { // Using an enum because the token kinds are fixed.
   PUNC_INCL_BLK_COMMENT_END, // */
   // Identifiers
   IDENTIFIER,
-  // LITERALS
+  // LITERALS 
   LIT_STRING,
   LIT_INT,
   LIT_FLOAT,

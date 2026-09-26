@@ -31,6 +31,24 @@ target_compile_options(vortex_lexer_tests PRIVATE -std=c++26)
 
 add_test(NAME lexer_tests COMMAND vortex_lexer_tests)
 
+add_executable(vortex_parser_expression_tests
+    tests/parser_expression_tests.cpp
+)
+
+target_link_libraries(vortex_parser_expression_tests PRIVATE vortex_compiler)
+target_compile_options(vortex_parser_expression_tests PRIVATE -std=c++26)
+
+add_test(NAME parser_expression_tests COMMAND vortex_parser_expression_tests)
+
+add_executable(vortex_parser_type_tests
+    tests/parser_type_tests.cpp
+)
+
+target_link_libraries(vortex_parser_type_tests PRIVATE vortex_compiler)
+target_compile_options(vortex_parser_type_tests PRIVATE -std=c++26)
+
+add_test(NAME parser_type_tests COMMAND vortex_parser_type_tests)
+
 add_custom_target(format
     COMMAND "${CMAKE_SOURCE_DIR}/scripts/format.sh"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"

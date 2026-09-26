@@ -3,4 +3,13 @@ fn main() {
     /* Block comments should be ignored. */
     let value: i32 = 10;
     let result = value + 5;
+    let array: [i32; 5] = [2, 4, 6, 8, 10];
+    for i in 0..result {
+        println("Value: {}", i);
+        if i % 2 == 0 {
+            println("Even");
+        } else {
+            println("Odd");
+        }
+    }
 }

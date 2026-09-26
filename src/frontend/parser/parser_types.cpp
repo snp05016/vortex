@@ -1,8 +1,11 @@
 #include "parser.h"
 
-// parses a type; type parsing is not implemented yet.
+// parses a primitive or array type.
 std::unique_ptr<Type> Parser::parse_type() {
     Token type_token = peek();
+    if (type_token.kind == TokenKind::PUNC_LBRACKET) {
+        return check_array_type();
+    }
     PrimitiveTypeKind kind;
     switch (type_token.kind) {
     case TokenKind::KW_VOID:
@@ -38,4 +41,41 @@ std::unique_ptr<Type> Parser::parse_type() {
 
     advance();
     return std::make_unique<PrimitiveType>(type_token.location, kind);
+}
+
+std::unique_ptr<Type> Parser::check_array_type() {
+    Token type_token = peek();
+    if (type_token.kind != TokenKind::PUNC_LBRACKET) {
+        return nullptr;
+    }
+    advance(); // consume '['.
+
+    auto element_type = parse_type();
+    if (!element_type) {
+        parser_errors::expected(peek().location, "type", "after '['");
+    }
+    if (!match(TokenKind::PUNC_SEMICOLON)) {
+        parser_errors::expected(peek().location, "';'",
+                                "after array element type");
+    }
+    if (check(TokenKind::PUNC_RBRACKET)) {
+        parser_errors::expected(peek().location, "array dimension");
+    }
+    std::vector<std::unique_ptr<Expr>> dimensions;
+    while (true) {
+        auto dimension = parse_expression();
+        dimensions.push_back(std::move(dimension));
+        if (!match(TokenKind::PUNC_COMMA)) {
+            break;
+        }
+        if (check(TokenKind::PUNC_RBRACKET)) {
+            parser_errors::invalid(peek().location,
+                                   "trailing comma in array type");
+        }
+    }
+    if (!match(TokenKind::PUNC_RBRACKET)) {
+        parser_errors::expected(peek().location, "']'", "after array type");
+    }
+    return std::make_unique<ArrayType>(
+        type_token.location, std::move(element_type), std::move(dimensions));
 }

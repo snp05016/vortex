@@ -2,6 +2,7 @@
 #include "../ast.h"
 #include "../lexer.h"
 #include "../token.h"
+#include "errors/parser_error.h"
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -23,9 +24,11 @@ class Parser {
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_function_declaration();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Type> parse_type();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_unary();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_postfix();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_primary();
-
-  private:
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Type> check_array_type();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_var_declaration();
+    private:
     inline Token peek(); // returns the next token without consuming it.
     Lexer lexer;
 
@@ -48,22 +51,24 @@ class Parser {
         lookahead_.reset();
     } // consumes the current token.
 
-    void expect(TokenKind kind) {
+    void expect(TokenKind kind, std::string_view expected_value) {
         if (!match(kind)) {
-            // reports a missing token at the current parser position.
-            throw std::runtime_error("Expected token not found");
+            parser_errors::expected(peek().location, expected_value);
         }
     }
 };
 
 static std::unordered_map<TokenKind, int> operator_precedence = {
-    {TokenKind::OP_LOGICAL_OR, 1}, {TokenKind::OP_LOGICAL_AND, 2},
-    {TokenKind::OP_EQUAL, 3},      {TokenKind::OP_NOT_EQUAL, 3},
-    {TokenKind::OP_LESS, 4},       {TokenKind::OP_GREATER, 4},
-    {TokenKind::OP_LESS_EQUAL, 4}, {TokenKind::OP_GREATER_EQUAL, 4},
-    {TokenKind::OP_PLUS, 5},       {TokenKind::OP_MINUS, 5},
-    {TokenKind::OP_MULTIPLY, 6},   {TokenKind::OP_DIVIDE, 6},
-    {TokenKind::OP_MODULO, 6},
+    {TokenKind::OP_LOGICAL_OR, 2},  {TokenKind::OP_LOGICAL_AND, 3},
+    {TokenKind::OP_BITWISE_OR, 4},  {TokenKind::OP_BITWISE_XOR, 5},
+    {TokenKind::OP_BITWISE_AND, 6}, {TokenKind::OP_EQUAL, 7},
+    {TokenKind::OP_NOT_EQUAL, 7},   {TokenKind::OP_LESS, 8},
+    {TokenKind::OP_GREATER, 8},     {TokenKind::OP_LESS_EQUAL, 8},
+    {TokenKind::OP_GREATER_EQUAL, 8},
+    {TokenKind::OP_LEFT_SHIFT, 9},  {TokenKind::OP_RIGHT_SHIFT, 9},
+    {TokenKind::OP_PLUS, 10},       {TokenKind::OP_MINUS, 10},
+    {TokenKind::OP_MULTIPLY, 11},   {TokenKind::OP_DIVIDE, 11},
+    {TokenKind::OP_MODULO, 11},
 };
 
 inline Token Parser::peek() {
