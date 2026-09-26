@@ -4,9 +4,7 @@
 /// for `let count = 1;`, it delegates to the variable declaration parser.
 /// unsupported statement kinds currently return no node for the caller to handle.
 std::unique_ptr<Stmt> Parser::parse_statement() {
-    if (check(TokenKind::KW_LET)) {
-        return parse_var_declaration();
-    }
+    parse_var_declaration();
     return nullptr;
 }
 
@@ -51,3 +49,36 @@ std::unique_ptr<Stmt> Parser::parse_var_declaration() {
         var_token.location, is_mutable, std::move(var_name),
         std::move(var_type), std::move(initializer));
 }
+std::unique_ptr<Stmt> parse_assignment_statement(){
+    Token lhs = peek();
+    if (!match(TokenKind::IDENTIFIER)) {
+        parser_errors::expected(lhs.location, "identifier",
+                                "for assignment statement");
+    }
+    std::string lhs_name = lhs.current_token_string();
+}
+std::unique_ptr<Stmt> parse_return_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_expression_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_block_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_if_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_while_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_for_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_break_statement(){
+    return nullptr;
+}
+std::unique_ptr<Stmt> parse_continue_statement(){
+    return nullptr;
+}
+ 

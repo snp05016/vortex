@@ -27,6 +27,15 @@ class Parser {
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_primary();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Type> check_array_type();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_var_declaration();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_assignment_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_return_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_expression_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_block_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_if_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_while_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_for_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_break_statement();
+    [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_continue_statement();
     private:
     inline Token peek();
     Lexer lexer;
