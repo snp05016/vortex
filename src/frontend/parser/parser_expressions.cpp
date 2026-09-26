@@ -2,7 +2,9 @@
 
 namespace {
 
-// decodes the contents of a quoted string or character token.
+/// decodes the contents of a string or character token.
+/// for `"line\\nnext"`, it replaces the escape with a newline character.
+/// unsupported escapes raise a parser error instead of being silently accepted.
 inline std::string decode_string_literal(const Token &token) {
     const std::string text = token.current_token_string();
     std::string value;
@@ -47,7 +49,9 @@ inline std::string decode_string_literal(const Token &token) {
 
 } // namespace
 
-// parses prefix operators and then delegates to a primary expression.
+/// parses prefix operators and their right-associative operand.
+/// for `&mut values[index]`, it preserves the mutable reference operation.
+/// postfix access is parsed before the prefix node is built.
 std::unique_ptr<Expr> Parser::parse_unary() {
     Token tok = peek();
     UnaryOp op;
@@ -96,8 +100,9 @@ std::unique_ptr<Expr> Parser::parse_unary() {
     return std::make_unique<Unary>(tok.location, op, std::move(operand));
 }
 
-// parses calls, indexing, and field access after a primary expression.
-// for example, in the expression `foo.bar()[0]`, `foo` is a primary expression, and `.bar()` and `[0]` are postfix expressions.
+/// parses chained calls, indices, and field accesses after a primary expression.
+/// for `factory().items[row].value`, it builds each suffix from left to right.
+/// call and index trailing commas are rejected by the v0.1 grammar.
 std::unique_ptr<Expr> Parser::parse_postfix() {
     auto expression = parse_primary();
     while (true) {
@@ -160,7 +165,9 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
     }
 }
 
-// parses literals, names, casts, arrays, struct values, and grouped values.
+/// parses literals, names, casts, arrays, structs, and grouped expressions.
+/// for `[0; 2, 3]`, it builds a repeat-array expression with two dimensions.
+/// type checking is left to later stages; this function only preserves syntax.
 std::unique_ptr<Expr> Parser::parse_primary() {
     Token tok = peek();
     PrimitiveTypeKind cast_type = PrimitiveTypeKind::Void;

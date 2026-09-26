@@ -2,6 +2,9 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+/// chooses the correct parser for a top-level declaration.
+/// for `fn main() {}`, it delegates to the function declaration parser.
+/// only functions and structs are valid top-level declarations in v0.1.
 std::unique_ptr<Decl> Parser::parse_declaration() {
     Token tok = peek();
     switch (tok.kind) {
@@ -14,7 +17,9 @@ std::unique_ptr<Decl> Parser::parse_declaration() {
     }
 }
 
-// fn add(x:i32,y:i64) -> i32 { return x + y; }
+/// parses a function name, parameters, return type, and body.
+/// for `fn add(left: i32, right: i32) -> i32 {}`, it keeps the signature in order.
+/// an omitted return type becomes `void`, while trailing parameter commas are rejected.
 std::unique_ptr<Decl> Parser::parse_function_declaration() {
     Token function_token = peek();
     if (function_token.kind != TokenKind::KW_FN) {
@@ -106,7 +111,9 @@ std::unique_ptr<Decl> Parser::parse_function_declaration() {
         std::move(parameters), std::move(return_type), std::move(body));
 }
 
-// parsing the struct definitions
+/// parses a struct name and its ordered field declarations.
+/// for `struct point { x: f32, y: f32 }`, it records both fields in source order.
+/// structs need at least one field, and a final field comma is allowed.
 std::unique_ptr<Decl> Parser::parse_struct_declaration() {
     Token struct_token = peek();
     auto struct_token_location = struct_token.location;
@@ -163,4 +170,3 @@ std::unique_ptr<Decl> Parser::parse_struct_declaration() {
                                         std::move(struct_name),
                                         std::move(fields));
 }
-// 

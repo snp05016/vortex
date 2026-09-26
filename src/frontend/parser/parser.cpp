@@ -4,6 +4,9 @@
 
 namespace {
 
+/// maps a binary operator token to the matching ast operation.
+/// for `left + right`, it turns `+` into the addition operation.
+/// it returns no value when the token is not a binary operator.
 std::optional<BinOp> binary_operator(TokenKind kind) {
     switch (kind) {
     case TokenKind::OP_PLUS:
@@ -47,12 +50,18 @@ std::optional<BinOp> binary_operator(TokenKind kind) {
     }
 }
 
+/// tells whether an ast operation is equality or comparison.
+/// for `left <= right`, it recognizes the less-than-or-equal operation.
+/// this distinction prevents unparenthesized comparison chains.
 bool is_equality_or_comparison(BinOp op) {
     return op == BinOp::Equal || op == BinOp::NotEqual || op == BinOp::Less ||
            op == BinOp::Greater || op == BinOp::LessEqual ||
            op == BinOp::GreaterEqual;
 }
 
+/// checks whether an expression directly contains equality or comparison.
+/// for `left < right`, it returns true, while `(left < right)` is a group.
+/// grouped expressions stay distinguishable so explicit parentheses are respected.
 bool is_unparenthesized_equality_or_comparison(const Expr &expression) {
     const auto *binary = dynamic_cast<const BinaryExpr *>(&expression);
     return binary && is_equality_or_comparison(binary->op());
@@ -60,11 +69,15 @@ bool is_unparenthesized_equality_or_comparison(const Expr &expression) {
 
 } // namespace
 
-// constructs a parser for a source buffer.
+/// creates a parser over source text supplied by the caller.
+/// for `let count = 1;`, parsing begins at the `let` token.
+/// the source buffer must stay alive for as long as the parser uses it.
 Parser::Parser(const char *source, std::size_t length) : lexer(source, length) {
 }
 
-// prints each token until the lexer reaches the end of the source.
+/// reads and prints every token until the source reaches its end.
+/// for `let count = 1;`, it prints the declaration tokens in order.
+/// this is currently a debugging entry point and does not build a program ast.
 void Parser::parse() {
     while (true) {
         Token token = lexer.next_token();
@@ -80,7 +93,9 @@ void Parser::parse() {
     }
 }
 
-// parses an expression through the binary-expression entry point.
+/// parses one complete expression, including an optional range.
+/// for `start..=end`, it builds an inclusive range expression.
+/// ordinary operators are parsed first because ranges have the lowest precedence.
 std::unique_ptr<Expr> Parser::parse_expression() {
     auto start = parse_binary_expression(2);
     Token range_operator = peek();
@@ -98,7 +113,9 @@ std::unique_ptr<Expr> Parser::parse_expression() {
         range_operator.kind == TokenKind::PUNC_INCL_RANGE);
 }
 
-// parses the current expression with the requested precedence floor.
+/// parses binary operators at or above the requested precedence.
+/// for `2 + 3 * 4`, multiplication becomes the right child of addition.
+/// equality and comparison chains are rejected unless parentheses separate them.
 std::unique_ptr<Expr> Parser::parse_binary_expression(int min_precedence) {
     auto left = parse_unary();
     bool saw_equality_or_comparison = false;

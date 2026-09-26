@@ -11,13 +11,12 @@
 
 class Parser {
   public:
-    Parser(const char *source,
-           std::size_t length); // constructs a parser for a source buffer.
-    void parse();               // prints the tokens in the source buffer.
+    Parser(const char *source, std::size_t length);
+    void parse();
     [[nodiscard("you prolly meant to use it")]]std::optional<Token> lookahead_;
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_expression();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_binary_expression(
-  int min_precedence); // parses an expressi)on at a precedence floor.
+  int min_precedence);
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_statement();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_declaration();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Decl> parse_struct_declaration();
@@ -29,16 +28,20 @@ class Parser {
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Type> check_array_type();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_var_declaration();
     private:
-    inline Token peek(); // returns the next token without consuming it.
+    inline Token peek();
     Lexer lexer;
 
-    // this function checks if the next token is of the specified kind without consuming it.
-    // used for lookahead and conditional parsing.
+    /// checks the next token without consuming it.
+    /// while parsing `let value = 1;`, it can check whether the next token is `let`.
+    /// repeated checks see the same cached token until parsing advances.
     bool check(TokenKind kind) {
         Token tok = peek();
         return tok.kind == kind;
     }
 
+    /// consumes the next token only when it has the requested kind.
+    /// after `let mut value = 1;`, matching `mut` records optional mutability.
+    /// a failed match leaves the token untouched so another rule can inspect it.
     bool match(TokenKind kind) {
         if (check(kind)) {
             advance(); // consume the token.
@@ -47,10 +50,16 @@ class Parser {
         return false;
     }
 
+    /// consumes the cached token by clearing parser lookahead.
+    /// after reading `let` in `let value = 1;`, advancing exposes `value`.
+    /// the lexer moves only when the parser asks for the next token.
     void advance() {
         lookahead_.reset();
-    } // consumes the current token.
+    }
 
+    /// consumes a required token or raises a located parser error.
+    /// in `let value = 1;`, it can require the final `;`.
+    /// callers provide the human-readable spelling used in the diagnostic.
     void expect(TokenKind kind, std::string_view expected_value) {
         if (!match(kind)) {
             parser_errors::expected(peek().location, expected_value);
@@ -71,6 +80,9 @@ static std::unordered_map<TokenKind, int> operator_precedence = {
     {TokenKind::OP_MODULO, 11},
 };
 
+/// returns the next token and caches it for stable lookahead.
+/// for `value + 1`, repeated peeks return `value` until it is consumed.
+/// token text still points into the caller-owned source buffer.
 inline Token Parser::peek() {
     if (!lookahead_) {
         lookahead_ = lexer.next_token();

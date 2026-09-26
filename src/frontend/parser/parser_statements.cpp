@@ -1,6 +1,8 @@
 #include "parser.h"
 
-// parses a statement; statement parsing is not implemented yet.
+/// chooses the parser for the statement at the current token.
+/// for `let count = 1;`, it delegates to the variable declaration parser.
+/// unsupported statement kinds currently return no node for the caller to handle.
 std::unique_ptr<Stmt> Parser::parse_statement() {
     if (check(TokenKind::KW_LET)) {
         return parse_var_declaration();
@@ -8,6 +10,9 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
     return nullptr;
 }
 
+/// parses a local variable declaration and its initializer.
+/// for `let mut total: f32 = 0.0;`, it keeps mutability, type, name, and value.
+/// the type annotation is optional, but the initializer and final semicolon are required.
 std::unique_ptr<Stmt> Parser::parse_var_declaration() {
     Token var_token = peek();
     if (!match(TokenKind::KW_LET)) {

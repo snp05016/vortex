@@ -14,3 +14,9 @@ Risk: preserve the user's in-progress declaration, statement, type, token, and s
 - [x] Parse array types recursively through `parse_type()`.
 - [x] Reject missing dimensions and trailing dimension commas.
 - [x] Add focused array-type tests and restore the green build.
+
+# Parser documentation comments
+
+- [x] document every parser and parser-error function in lowercase natural language.
+- [x] include a vortex example and one important behavioral note for each function.
+- [x] verify comment-only changes preserve formatting, build, and tests.

@@ -1,6 +1,8 @@
 #include "parser.h"
 
-// parses a primitive or array type.
+/// parses a primitive type or recursively nested array type.
+/// for `[[i32; 2]; 3]`, it builds an outer array whose element is another array.
+/// named and reference types are not handled here yet.
 std::unique_ptr<Type> Parser::parse_type() {
     Token type_token = peek();
     if (type_token.kind == TokenKind::PUNC_LBRACKET) {
@@ -43,6 +45,9 @@ std::unique_ptr<Type> Parser::parse_type() {
     return std::make_unique<PrimitiveType>(type_token.location, kind);
 }
 
+/// parses an array element type followed by one or more dimensions.
+/// for `[f32; 2 + 2, 8]`, it keeps both dimension expressions in source order.
+/// missing dimensions and trailing dimension commas are syntax errors.
 std::unique_ptr<Type> Parser::check_array_type() {
     Token type_token = peek();
     if (type_token.kind != TokenKind::PUNC_LBRACKET) {
