@@ -60,6 +60,15 @@ target_compile_options(vortex_parser_statement_tests PRIVATE -std=c++26)
 
 add_test(NAME parser_statement_tests COMMAND vortex_parser_statement_tests)
 
+add_executable(vortex_parser_declaration_tests
+    tests/parser_declaration_tests.cpp
+)
+
+target_link_libraries(vortex_parser_declaration_tests PRIVATE vortex_compiler)
+target_compile_options(vortex_parser_declaration_tests PRIVATE -std=c++26)
+
+add_test(NAME parser_declaration_tests COMMAND vortex_parser_declaration_tests)
+
 add_custom_target(format
     COMMAND "${CMAKE_SOURCE_DIR}/scripts/format.sh"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
