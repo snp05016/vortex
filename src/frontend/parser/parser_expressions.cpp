@@ -222,7 +222,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (tok.kind == TokenKind::LIT_INT) {
         advance(); // consume the integer literal.
         const std::string text = tok.current_token_string();
-        const bool is_binary = text.starts_with("0b");
+        const bool is_binary =
+            text.size() >= 2 && text[0] == '0' && text[1] == 'b';
         std::uint64_t value = 0;
         try {
             value = is_binary ? std::stoull(text.substr(2), nullptr, 2)

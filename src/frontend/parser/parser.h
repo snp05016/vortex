@@ -56,6 +56,8 @@ class Parser {
     parse_continue_statement();
     [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Type>
     parse_reference_type();
+    [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Type>
+    parse_type_or_reference();
 
   private:
     inline Token peek(std::size_t distance = 0);

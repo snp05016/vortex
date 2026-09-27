@@ -102,3 +102,14 @@ std::unique_ptr<Type> Parser::parse_reference_type() {
     return std::make_unique<ReferenceType>(
         ref_token.location, std::move(referenced_type), is_mutable);
 }
+
+// parses either a reference type or a regular type, it first tries to parse a
+// reference type, if that fails then it tries to parse a regular type
+// if both fail, then god help us all
+std::unique_ptr<Type> Parser::parse_type_or_reference() {
+    auto type = parse_reference_type();
+    if (type) {
+        return type;
+    }
+    return parse_type();
+}

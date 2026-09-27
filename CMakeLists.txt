@@ -65,3 +65,9 @@ add_custom_target(format
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "Formatting Vortex C++ sources"
 )
+
+add_custom_target(tidy-fix
+    COMMAND sh -c "scripts/tidy-fix.sh $(find src tests -name '*.cpp')"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Applying clang-tidy fixes"
+)

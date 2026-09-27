@@ -1,10 +1,14 @@
 #pragma once
 #include "../../token.h"
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
-enum class ParserErrorKind {
+enum class ParserErrorKind : std::uint8_t { // sum fuckass warning that llvm
+                                            // linter was giving change the
+                                            // default size of each var in the
+                                            // enum to 1 byte to save memory
     Expected,
     Unexpected,
     Invalid,

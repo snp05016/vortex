@@ -32,10 +32,31 @@
 
     "errorLens.enabledDiagnosticLevels": ["error"],
 
+    // no squiggly underlines; errors still show in Error Lens and the Problems panel.
+    "workbench.colorCustomizations": {
+        "editorError.foreground": "#00000000",
+        "editorWarning.foreground": "#00000000",
+        "editorInfo.foreground": "#00000000",
+        "editorHint.foreground": "#00000000",
+        "editorUnnecessaryCode.opacity": "#000000ff"
+    },
+
+    // after each save of a c/c++ source, apply clang-tidy fixes (nodiscard, const, override, ...).
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": "\\.(c|cc|cpp|cxx)$",
+                "cmd": "${workspaceFolder}/scripts/tidy-fix.sh '${file}'"
+            }
+        ]
+    },
+
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureOnOpen": true,
     "cmake.exportCompileCommandsFile": true,
     "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
-        "cppcoreguidelines-special-member-functions"
+        "cppcoreguidelines-special-member-functions",
+        "clang-diagnostic-error",
+        "readability-else-after-return"
     ]
 }

@@ -18,7 +18,6 @@ Checks: >
   -cppcoreguidelines-non-private-member-variables-in-classes,
   -cppcoreguidelines-avoid-const-or-ref-data-members,
   -misc-no-recursion,
-  -performance-enum-size,
   -readability-trailing-comma,
   -modernize-use-designated-initializers,
   -readability-implicit-bool-conversion,
