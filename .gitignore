@@ -1,6 +1,40 @@
+# cmake and test output
 /build/
+/cmake-build-*/
 /Testing/
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+cmake_install.cmake
+
+# generated documentation
 /site/
-__pycache__/
 .lycheecache
+
+# python environments and caches
+__pycache__/
+*.py[cod]
 *.egg-info/
+.mypy_cache/
+.pytest_cache/
+.venv/
+
+# local agent and indexing state
+/.cache/
+/.remember/
+/.TextFiles/
+/.claude/
+**/.claude-flow/
+agentdb.rvf*
+ruvector.db*
+
+# local secrets
+.env
+.env.*
+!.env.example
+
+# operating-system and editor files
+.DS_Store
+.idea/
+*.swp
+*.swo
