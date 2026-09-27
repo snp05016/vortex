@@ -4,8 +4,8 @@
 #include "../token.h"
 #include "errors/parser_error.h"
 #include <cstddef>
+#include <deque>
 #include <memory>
-#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -13,7 +13,6 @@ class Parser {
   public:
     Parser(const char *source, std::size_t length);
     void parse();
-    [[nodiscard("you prolly meant to use it")]]std::optional<Token> lookahead_;
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_expression();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Expr> parse_binary_expression(
   int min_precedence);
@@ -37,8 +36,10 @@ class Parser {
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_break_statement();
     [[nodiscard("you prolly meant to use it")]]std::unique_ptr<Stmt> parse_continue_statement();
     private:
-    inline Token peek();
+    inline Token peek(std::size_t distance = 0);
+    bool starts_assignment_statement();
     Lexer lexer;
+    std::deque<Token> lookahead_;
 
     /// checks the next token without consuming it.
     /// while parsing `let value = 1;`, it can check whether the next token is `let`.
@@ -59,11 +60,14 @@ class Parser {
         return false;
     }
 
-    /// consumes the cached token by clearing parser lookahead.
+    /// consumes the first cached token while preserving later lookahead.
     /// after reading `let` in `let value = 1;`, advancing exposes `value`.
     /// the lexer moves only when the parser asks for the next token.
     void advance() {
-        lookahead_.reset();
+        if (lookahead_.empty()) {
+            peek();
+        }
+        lookahead_.pop_front();
     }
 
     /// consumes a required token or raises a located parser error.
@@ -92,9 +96,9 @@ static std::unordered_map<TokenKind, int> operator_precedence = {
 /// returns the next token and caches it for stable lookahead.
 /// for `value + 1`, repeated peeks return `value` until it is consumed.
 /// token text still points into the caller-owned source buffer.
-inline Token Parser::peek() {
-    if (!lookahead_) {
-        lookahead_ = lexer.next_token();
+inline Token Parser::peek(std::size_t distance) {
+    while (lookahead_.size() <= distance) {
+        lookahead_.push_back(lexer.next_token());
     }
-    return *lookahead_;
+    return lookahead_[distance];
 }

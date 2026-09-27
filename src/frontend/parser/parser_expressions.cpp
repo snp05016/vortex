@@ -246,7 +246,9 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     } else if (tok.kind == TokenKind::IDENTIFIER) {
         advance(); // consume the identifier.
 
-        if (check(TokenKind::PUNC_LBRACE)) {
+        if (check(TokenKind::PUNC_LBRACE) &&
+            peek(1).kind == TokenKind::IDENTIFIER &&
+            peek(2).kind == TokenKind::PUNC_COLON) {
             advance();
             std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields;
 

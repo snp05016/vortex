@@ -1,11 +1,95 @@
 #include "parser.h"
 
+namespace {
+bool is_assignment_operator(TokenKind kind) {
+    return kind == TokenKind::OP_ASSIGN ||
+           kind == TokenKind::OP_PLUS_ASSIGN ||
+           kind == TokenKind::OP_MINUS_ASSIGN ||
+           kind == TokenKind::OP_MULTIPLY_ASSIGN ||
+           kind == TokenKind::OP_DIVIDE_ASSIGN ||
+           kind == TokenKind::OP_MODULO_ASSIGN;
+}
+
+bool is_assignment_target(const Expr &expression) {
+    if (dynamic_cast<const Identifier *>(&expression)) {
+        return true;
+    }
+    if (const auto *index = dynamic_cast<const IndexExpr *>(&expression)) {
+        return is_assignment_target(index->collection());
+    }
+    if (const auto *field = dynamic_cast<const FieldAccessExpr *>(&expression)) {
+        return is_assignment_target(field->object());
+    }
+    return false;
+}
+} // namespace
+
+// this funct parses parses a statement that starts with an identifier and is followed by an assignment operator.
+// for example) `value = 1;` or `values[index] += 2;` or `object.field -= 3;`
+// what this does is that it checks if the statement starts with an identifier and is followed by an assignment operator. 
+// If it does, it parses the statement as an assignment statement. 
+//if not, it returns false and the parser will try to parse the statement as an expression statement instead.
+bool Parser::starts_assignment_statement() {
+    if (!check(TokenKind::IDENTIFIER)) {
+        return false;
+    }
+    std::size_t offset = 1;
+    while (true) {
+        if (peek(offset).kind == TokenKind::PUNC_DOT) {
+            if (peek(offset + 1).kind != TokenKind::IDENTIFIER) {
+                return false;
+            }
+            offset += 2;
+            continue;
+        }
+        if (peek(offset).kind == TokenKind::PUNC_LBRACKET) {
+            std::size_t bracket_depth = 1;
+            offset++;
+            while (bracket_depth != 0) {
+                TokenKind kind = peek(offset).kind;
+                if (kind == TokenKind::EOF_TOKEN) {
+                    return false;
+                }
+                if (kind == TokenKind::PUNC_LBRACKET) {
+                    bracket_depth++;
+                } else if (kind == TokenKind::PUNC_RBRACKET) {
+                    bracket_depth--;
+                }
+                offset++;
+            }
+            continue;
+        }
+        return is_assignment_operator(peek(offset).kind);
+    }
+}
+
 /// chooses the parser for the statement at the current token.
 /// for `let count = 1;`, it delegates to the variable declaration parser.
-/// unsupported statement kinds currently return no node for the caller to handle.
+/// identifier-led targets are assignments; other starts may be expressions.
 std::unique_ptr<Stmt> Parser::parse_statement() {
-    parse_var_declaration();
-    return nullptr;
+    switch (peek().kind) {
+    case TokenKind::KW_LET:
+        return parse_var_declaration();
+    case TokenKind::KW_RETURN:
+        return parse_return_statement();
+    case TokenKind::KW_IF:
+        return parse_if_statement();
+    case TokenKind::KW_WHILE:
+        return parse_while_statement();
+    case TokenKind::KW_FOR:
+        return parse_for_statement();
+    case TokenKind::KW_BREAK:
+        return parse_break_statement();
+    case TokenKind::KW_CONTINUE:
+        return parse_continue_statement();
+    case TokenKind::PUNC_LBRACE:
+        return parse_block_statement();
+    default:
+        if (starts_assignment_statement()) {
+            return parse_assignment_statement();
+        }
+        return parse_expression_statement();
+    }
 }
 
 /// parses a local variable declaration and its initializer.
@@ -49,36 +133,202 @@ std::unique_ptr<Stmt> Parser::parse_var_declaration() {
         var_token.location, is_mutable, std::move(var_name),
         std::move(var_type), std::move(initializer));
 }
-std::unique_ptr<Stmt> parse_assignment_statement(){
-    Token lhs = peek();
-    if (!match(TokenKind::IDENTIFIER)) {
-        parser_errors::expected(lhs.location, "identifier",
-                                "for assignment statement");
+std::unique_ptr<Stmt> Parser::parse_assignment_statement(){
+    Token target_token = peek();
+    auto lhs = parse_postfix();
+    if (!lhs || !is_assignment_target(*lhs)) {
+        parser_errors::invalid(target_token.location, "assignment target");
     }
-    std::string lhs_name = lhs.current_token_string();
+    AssignmentOperation op;
+    if (match(TokenKind::OP_ASSIGN)) {
+        op = AssignmentOperation::Assign;
+    } else if (match(TokenKind::OP_PLUS_ASSIGN)) {
+        op = AssignmentOperation::AddAssign;
+    } else if (match(TokenKind::OP_MINUS_ASSIGN)) {
+        op = AssignmentOperation::SubtractAssign;
+    } else if (match(TokenKind::OP_MULTIPLY_ASSIGN)) {
+        op = AssignmentOperation::MultiplyAssign;
+    } else if (match(TokenKind::OP_DIVIDE_ASSIGN)) {
+        op = AssignmentOperation::DivideAssign;
+    } else if (match(TokenKind::OP_MODULO_ASSIGN)) {
+        op = AssignmentOperation::RemainderAssign;
+    } else {
+        parser_errors::expected(peek().location, "assignment operator",
+                                "in assignment statement");
+    }
+    auto rhs = parse_expression();
+    if (!rhs) {
+        parser_errors::expected(peek().location, "expression",
+                                "for right-hand side of assignment");
+    }
+    if (!match(TokenKind::PUNC_SEMICOLON)) {
+        parser_errors::expected(peek().location, "';'",
+                                "after assignment statement");
+    }
+    return std::make_unique<AssignmentStatement>(
+        target_token.location, std::move(lhs), std::move(rhs), op);
 }
-std::unique_ptr<Stmt> parse_return_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_return_statement(){
+    Token return_token = peek();
+    if (!match(TokenKind::KW_RETURN)) {
+        parser_errors::expected(return_token.location, "'return'",
+                                "for return statement");
+    }
+    if (check(TokenKind::PUNC_SEMICOLON)) {
+        advance(); // consume ';'.
+        return std::make_unique<RetStmt>(return_token.location, nullptr);
+    } else {
+        auto return_value = parse_expression();
+        if (!return_value) {
+            parser_errors::expected(peek().location, "expression",
+                                    "for return value");
+        }
+        if (!match(TokenKind::PUNC_SEMICOLON)) {
+            parser_errors::expected(peek().location, "';'",
+                                    "after return statement");
+        }
+        return std::make_unique<RetStmt>(return_token.location,
+                                         std::move(return_value));
+    }
 }
-std::unique_ptr<Stmt> parse_expression_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_expression_statement(){
+    Token expression_token = peek();
+    auto expr = parse_expression();
+    if (!expr) {
+        parser_errors::expected(peek().location, "expression",
+                                "for expression statement");
+    }
+    if (!match(TokenKind::PUNC_SEMICOLON)) {
+        parser_errors::expected(peek().location, "';'",
+                                "after expression statement");
+    }
+    return std::make_unique<ExprStmt>(expression_token.location,
+                                      std::move(expr));
 }
-std::unique_ptr<Stmt> parse_block_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_block_statement(){
+    Token left_brace = peek();
+    if (!match(TokenKind::PUNC_LBRACE)) {
+        parser_errors::expected(left_brace.location, "'{'",
+                                "for block statement");
+    }
+    std::vector<std::unique_ptr<Stmt>> statements;
+    while (!check(TokenKind::PUNC_RBRACE)) {
+        if (check(TokenKind::EOF_TOKEN)) {
+            parser_errors::expected(peek().location, "'}'",
+                                    "after block statement");
+        }
+        auto statement = parse_statement();
+        if (!statement) {
+            parser_errors::expected(peek().location, "statement",
+                                    "in block statement");
+        }
+        statements.push_back(std::move(statement));
+    }
+    advance(); // consume '}'.
+    return std::make_unique<BlockStmt>(left_brace.location,
+                                       std::move(statements));
 }
-std::unique_ptr<Stmt> parse_if_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_if_statement(){
+    Token if_token = peek();
+    if (!match(TokenKind::KW_IF)) {
+        parser_errors::expected(if_token.location, "'if'",
+                                "for if statement");
+    }
+    auto condition = parse_expression();
+    if (!condition) {
+        parser_errors::expected(peek().location, "expression",
+                                "for if statement condition");
+    }
+
+    std::unique_ptr<Stmt> then_branch = parse_block_statement();
+    if (!then_branch) {
+        parser_errors::expected(peek().location, "block",
+                                "for then branch of if statement");
+    }
+
+    std::unique_ptr<Stmt> else_branch;
+    if (match(TokenKind::KW_ELSE)) {
+        if (check(TokenKind::KW_IF)) {
+            else_branch = parse_if_statement();
+        } else {
+            else_branch = parse_block_statement();
+        }
+    }
+
+    return std::make_unique<IfStmt>(if_token.location, std::move(condition),
+                                   std::move(then_branch), std::move(else_branch));
 }
-std::unique_ptr<Stmt> parse_while_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_while_statement(){
+    Token while_token = peek();
+    if (!match(TokenKind::KW_WHILE)) {
+        parser_errors::expected(while_token.location, "'while'",
+                                "for while statement");
+    }
+    auto condition = parse_expression();
+    if (!condition) {
+        parser_errors::expected(peek().location, "expression",
+                                "for while statement condition");
+    }
+
+    std::unique_ptr<Stmt> body = parse_block_statement();
+    if (!body) {
+        parser_errors::expected(peek().location, "block",
+                                "for body of while statement");
+    }
+
+    return std::make_unique<WhileStmt>(while_token.location, std::move(condition),
+                                       std::move(body));
 }
-std::unique_ptr<Stmt> parse_for_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_for_statement(){
+    Token for_token = peek();
+    if (!match(TokenKind::KW_FOR)) {
+        parser_errors::expected(for_token.location, "'for'",
+                                "for for statement");
+    }
+    Token loop_var_token = peek();
+    if (!match(TokenKind::IDENTIFIER)) {
+        parser_errors::expected(loop_var_token.location, "identifier",
+                                "for loop variable in for statement");
+    }
+    std::string loop_var_name = loop_var_token.current_token_string();
+    if (!match(TokenKind::KW_IN)) {
+        parser_errors::expected(peek().location, "'in'",
+                                "for for statement");
+    }
+    auto iterable = parse_expression();
+    if (!iterable) {
+        parser_errors::expected(peek().location, "expression",
+                                "for iterable in for statement");
+    }
+    std::unique_ptr<Stmt> body = parse_block_statement();
+    if (!body) {
+        parser_errors::expected(peek().location, "block",
+                                "for body of for statement");
+    }
+    return std::make_unique<ForStmt>(for_token.location, std::move(loop_var_name),
+                                   std::move(iterable), std::move(body));
 }
-std::unique_ptr<Stmt> parse_break_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_break_statement(){
+    Token break_token = peek();
+    if (!match(TokenKind::KW_BREAK)) {
+        parser_errors::expected(break_token.location, "'break'",
+                                "for break statement");
+    }
+    if (!match(TokenKind::PUNC_SEMICOLON)) {
+        parser_errors::expected(peek().location, "';'",
+                                "after break statement");
+    }
+    return std::make_unique<BreakStmt>(break_token.location);
 }
-std::unique_ptr<Stmt> parse_continue_statement(){
-    return nullptr;
+std::unique_ptr<Stmt> Parser::parse_continue_statement(){
+    Token continue_token = peek();
+    if (!match(TokenKind::KW_CONTINUE)) {
+        parser_errors::expected(continue_token.location, "'continue'",
+                                "for continue statement");
+    }
+    if (!match(TokenKind::PUNC_SEMICOLON)) {
+        parser_errors::expected(peek().location, "';'",
+                                "after continue statement");
+    }
+    return std::make_unique<ContinueStmt>(continue_token.location);
 }
- 
