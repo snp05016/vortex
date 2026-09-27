@@ -18,9 +18,10 @@ std::unique_ptr<Type> parse_type(const std::string &source) {
     return parser.parse_type();
 }
 
-void expect_parser_error(std::string_view test_name, std::string source) {
+void expect_parser_error(std::string_view test_name,
+                         const std::string &source) {
     try {
-        auto type = parse_type(source);
+        auto const type = parse_type(source);
         (void)type;
         fail(test_name, "source was accepted");
     } catch (const ParserError &) {
@@ -28,7 +29,7 @@ void expect_parser_error(std::string_view test_name, std::string source) {
 }
 
 void test_array_type() {
-    auto type = parse_type("[i32; 4]");
+    auto const type = parse_type("[i32; 4]");
     const auto *array = dynamic_cast<const ArrayType *>(type.get());
     if (!array || array->dimensions().size() != 1) {
         fail("array type", "one-dimensional array was not preserved");
@@ -42,7 +43,7 @@ void test_array_type() {
 }
 
 void test_expression_dimensions() {
-    auto type = parse_type("[f32; 2 + 2, 8 / 2]");
+    auto const type = parse_type("[f32; 2 + 2, 8 / 2]");
     const auto *array = dynamic_cast<const ArrayType *>(type.get());
     if (!array || array->dimensions().size() != 2) {
         fail("expression dimensions", "two dimensions were not preserved");
@@ -59,7 +60,7 @@ void test_expression_dimensions() {
 }
 
 void test_nested_array_type() {
-    auto type = parse_type("[[i32; 2]; 3]");
+    auto const type = parse_type("[[i32; 2]; 3]");
     const auto *outer = dynamic_cast<const ArrayType *>(type.get());
     const auto *inner =
         outer ? dynamic_cast<const ArrayType *>(&outer->element_type())
@@ -79,7 +80,7 @@ void test_invalid_array_types() {
 void test_repeat_array_remains_expression() {
     const std::string source = "let values = [0; 2, 3];";
     Parser parser(source.data(), source.size());
-    auto statement = parser.parse_statement();
+    auto const statement = parser.parse_statement();
     const auto *variable = dynamic_cast<const VarDeclStmt *>(statement.get());
     const auto *repeat =
         variable

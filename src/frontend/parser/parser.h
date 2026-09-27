@@ -7,7 +7,6 @@
 #include <deque>
 #include <memory>
 #include <string>
-#include <unordered_map>
 
 class Parser {
   public:
@@ -55,6 +54,8 @@ class Parser {
     parse_break_statement();
     [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Stmt>
     parse_continue_statement();
+    [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Type>
+    parse_reference_type();
 
   private:
     inline Token peek(std::size_t distance = 0);
@@ -66,7 +67,7 @@ class Parser {
     /// while parsing `let value = 1;`, it can check whether the next token is
     /// `let`. repeated checks see the same cached token until parsing advances.
     bool check(TokenKind kind) {
-        Token tok = peek();
+        Token const tok = peek();
         return tok.kind == kind;
     }
 
@@ -102,17 +103,41 @@ class Parser {
     }
 };
 
-static std::unordered_map<TokenKind, int> operator_precedence = {
-    {TokenKind::OP_LOGICAL_OR, 2},    {TokenKind::OP_LOGICAL_AND, 3},
-    {TokenKind::OP_BITWISE_OR, 4},    {TokenKind::OP_BITWISE_XOR, 5},
-    {TokenKind::OP_BITWISE_AND, 6},   {TokenKind::OP_EQUAL, 7},
-    {TokenKind::OP_NOT_EQUAL, 7},     {TokenKind::OP_LESS, 8},
-    {TokenKind::OP_GREATER, 8},       {TokenKind::OP_LESS_EQUAL, 8},
-    {TokenKind::OP_GREATER_EQUAL, 8}, {TokenKind::OP_LEFT_SHIFT, 9},
-    {TokenKind::OP_RIGHT_SHIFT, 9},   {TokenKind::OP_PLUS, 10},
-    {TokenKind::OP_MINUS, 10},        {TokenKind::OP_MULTIPLY, 11},
-    {TokenKind::OP_DIVIDE, 11},       {TokenKind::OP_MODULO, 11},
-};
+/// returns the binding power of a binary operator, or -1 for non-operators.
+constexpr int operator_precedence(TokenKind kind) {
+    switch (kind) {
+    case TokenKind::OP_LOGICAL_OR:
+        return 2;
+    case TokenKind::OP_LOGICAL_AND:
+        return 3;
+    case TokenKind::OP_BITWISE_OR:
+        return 4;
+    case TokenKind::OP_BITWISE_XOR:
+        return 5;
+    case TokenKind::OP_BITWISE_AND:
+        return 6;
+    case TokenKind::OP_EQUAL:
+    case TokenKind::OP_NOT_EQUAL:
+        return 7;
+    case TokenKind::OP_LESS:
+    case TokenKind::OP_GREATER:
+    case TokenKind::OP_LESS_EQUAL:
+    case TokenKind::OP_GREATER_EQUAL:
+        return 8;
+    case TokenKind::OP_LEFT_SHIFT:
+    case TokenKind::OP_RIGHT_SHIFT:
+        return 9;
+    case TokenKind::OP_PLUS:
+    case TokenKind::OP_MINUS:
+        return 10;
+    case TokenKind::OP_MULTIPLY:
+    case TokenKind::OP_DIVIDE:
+    case TokenKind::OP_MODULO:
+        return 11;
+    default:
+        return -1;
+    }
+}
 
 /// returns the next token and caches it for stable lookahead.
 /// for `value + 1`, repeated peeks return `value` until it is consumed.

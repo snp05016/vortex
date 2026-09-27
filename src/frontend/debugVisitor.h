@@ -2,7 +2,7 @@
 #include "token.h"
 #include <iostream>
 
-const char *token_kind_name(TokenKind kind) {
+inline const char *token_kind_name(TokenKind kind) {
     switch (kind) {
     case TokenKind::KW_FN:
         return "KW_FN";
@@ -156,7 +156,6 @@ class DebugVisitor {
         std::cout << token_kind_name(token.kind) << ", Location: ["
                   << token.location.start << ", " << token.location.length
                   << "], Text: "
-                  << std::string(token.text, token.location.length)
-                  << std::endl;
+                  << std::string(token.text, token.location.length) << '\n';
     }
 };

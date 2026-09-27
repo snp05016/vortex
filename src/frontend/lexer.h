@@ -35,7 +35,7 @@ class Lexer {
     bool is_punctuation(char c) {
         return c == '(' || c == ')' || c == '{' || c == '}' || c == ';' ||
                c == '.' || c == '[' || c == ']' || c == ':' || c == ',' ||
-               c == '-' || c == '>' || c == '.';
+               c == '-' || c == '>';
     }
 
     bool is_blk_comment_start(char c1, char c2) {
@@ -63,5 +63,5 @@ class Lexer {
     void skip_blk_comment();
     Token figure_out_token();
     std::size_t length;
-    std::size_t position;
+    std::size_t position{0};
 };

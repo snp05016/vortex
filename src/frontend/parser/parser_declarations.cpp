@@ -1,3 +1,4 @@
+#include "errors/parser_error.h"
 #include "parser.h"
 #include <stdexcept>
 #include <utility>
@@ -7,7 +8,7 @@
 /// for `fn main() {}`, it delegates to the function declaration parser.
 /// only functions and structs are valid top-level declarations in v0.1.
 std::unique_ptr<Decl> Parser::parse_declaration() {
-    Token tok = peek();
+    Token const tok = peek();
     switch (tok.kind) {
     case TokenKind::KW_FN:
         return parse_function_declaration();
@@ -23,13 +24,13 @@ std::unique_ptr<Decl> Parser::parse_declaration() {
 /// order. an omitted return type becomes `void`, while trailing parameter
 /// commas are rejected.
 std::unique_ptr<Decl> Parser::parse_function_declaration() {
-    Token function_token = peek();
+    Token const function_token = peek();
     if (function_token.kind != TokenKind::KW_FN) {
         ParserError::expected(function_token.location, "function declaration");
     }
 
     advance(); // consume "fn".
-    Token name_token = peek();
+    Token const name_token = peek();
     if (name_token.kind != TokenKind::IDENTIFIER) {
         ParserError::expected(name_token.location, "function name",
                               "after 'fn'");
@@ -85,7 +86,7 @@ std::unique_ptr<Decl> Parser::parse_function_declaration() {
                 .location, // if no return type is specified, defaulting to void
             PrimitiveTypeKind::Void);
     }
-    Token left_brace = peek();
+    Token const left_brace = peek();
     if (!match(TokenKind::PUNC_LBRACE)) {
         ParserError::expected(left_brace.location, "'{'",
                               "before function body");
@@ -115,13 +116,13 @@ std::unique_ptr<Decl> Parser::parse_function_declaration() {
 /// for `struct point { x: f32, y: f32 }`, it records both fields in source
 /// order. structs need at least one field, and a final field comma is allowed.
 std::unique_ptr<Decl> Parser::parse_struct_declaration() {
-    Token struct_token = peek();
-    auto struct_token_location = struct_token.location;
+    Token const struct_token = peek();
+    auto const struct_token_location = struct_token.location;
     if (struct_token.kind != TokenKind::KW_STRUCT) {
         ParserError::expected(struct_token.location, "struct declaration");
     }
     advance(); // consume "struct".
-    Token name_token = peek();
+    Token const name_token = peek();
     if (name_token.kind != TokenKind::IDENTIFIER) {
         ParserError::expected(name_token.location, "struct name",
                               "after 'struct'");

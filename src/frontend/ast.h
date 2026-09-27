@@ -23,7 +23,7 @@ class Node {
     virtual ~Node() = default; // virtual destructor to ensure proper cleanup of
                                // derived classes
 
-    SourceLocation location() const { // getter for the location
+    [[nodiscard]] SourceLocation location() const { // getter for the location
         return location_;
     }
 
@@ -40,7 +40,7 @@ class Node {
 /* represents a general expression node in the abstract syntax tree. */
 struct Expr : public Node {
   public:
-    virtual ~Expr() =
+    ~Expr() override =
         default; // virtual destructor for proper cleanup of derived classes
   protected:
     // create a new expr node with the location
@@ -54,7 +54,7 @@ struct Expr : public Node {
 /* represents a statement node in the abstract syntax tree. */
 struct Stmt : public Node {
   public:
-    virtual ~Stmt() =
+    ~Stmt() override =
         default; // virtual destructor for proper cleanup of derived classes
   protected:
     // create a new stmt node with the location
@@ -65,7 +65,7 @@ struct Stmt : public Node {
 /* represents a declaration node in the abstract syntax tree. */
 struct Decl : public Node {
   public:
-    virtual ~Decl() =
+    ~Decl() override =
         default; // virtual destructor for proper cleanup of derived classes
   protected:
     // create a new decl node with the location
@@ -76,7 +76,7 @@ struct Decl : public Node {
 /* represents a type node in the abstract syntax tree. */
 struct Type : public Node {
   public:
-    virtual ~Type() =
+    ~Type() override =
         default; // virtual destructor for proper cleanup of derived classes
   protected:
     // create a new type node with the location
@@ -94,7 +94,7 @@ using LiteralValue = std::variant<std::uint64_t, double, std::string, char,
 /* represents a literal value expression. */
 struct Literal : public Expr {
   public:
-    virtual ~Literal() =
+    ~Literal() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new literal node with the location
@@ -104,11 +104,11 @@ struct Literal : public Expr {
       // value_ and avoid copying the value, which can be expensive for large
       // objects. This is done to improve performance and reduce memory usage.
 
-    LiteralKind kind() const {
+    [[nodiscard]] LiteralKind kind() const {
         return kind_;
     }
 
-    const LiteralValue &value() const {
+    [[nodiscard]] const LiteralValue &value() const {
         return value_;
     }
 
@@ -122,7 +122,7 @@ struct Literal : public Expr {
 /* represents an identifier expression., for example) a variable name */
 struct Identifier : public Expr {
   public:
-    virtual ~Identifier() =
+    ~Identifier() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new identifier node with the location
@@ -130,7 +130,7 @@ struct Identifier : public Expr {
         : Expr(location), name_(std::move(name)) {
     }
 
-    const std::string &name() const {
+    [[nodiscard]] const std::string &name() const {
         return name_;
     }
 
@@ -142,7 +142,7 @@ struct Identifier : public Expr {
 /* represents a grouped expression enclosed by delimiters. */
 struct Grp : public Expr {
   public:
-    virtual ~Grp() =
+    ~Grp() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new group node with the location
@@ -150,7 +150,7 @@ struct Grp : public Expr {
         : Expr(location), expr_(std::move(expr)) {
     }
 
-    const Expr &expr() const {
+    [[nodiscard]] const Expr &expr() const {
         return *expr_;
     }
 
@@ -170,18 +170,18 @@ enum class UnaryOp {
 /* represents an expression with one operand and one unary operator. */
 struct Unary : public Expr {
   public:
-    virtual ~Unary() = default;
+    ~Unary() override = default;
 
     // create a new unary node with the location
     Unary(SourceLocation location, UnaryOp op, std::unique_ptr<Expr> operand)
         : Expr(location), op_(op), operand_(std::move(operand)) {
     }
 
-    UnaryOp op() const {
+    [[nodiscard]] UnaryOp op() const {
         return op_;
     }
 
-    const Expr &operand() const {
+    [[nodiscard]] const Expr &operand() const {
         return *operand_;
     }
 
@@ -222,7 +222,7 @@ enum class BinOp {
 /* represents an expression with two operands and one binary operator. */
 struct BinaryExpr : public Expr {
   public:
-    virtual ~BinaryExpr() =
+    ~BinaryExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new binary expression node with the location
@@ -232,15 +232,15 @@ struct BinaryExpr : public Expr {
           right_(std::move(right)) {
     }
 
-    BinOp op() const {
+    [[nodiscard]] BinOp op() const {
         return op_;
     }
 
-    const Expr &left() const {
+    [[nodiscard]] const Expr &left() const {
         return *left_;
     }
 
-    const Expr &right() const {
+    [[nodiscard]] const Expr &right() const {
         return *right_;
     }
 
@@ -255,7 +255,7 @@ struct BinaryExpr : public Expr {
 /* represents a range expression with a start and an end. */
 struct RangeExpr : public Expr {
   public:
-    virtual ~RangeExpr() =
+    ~RangeExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new range expression node with the location
@@ -265,15 +265,15 @@ struct RangeExpr : public Expr {
           is_inclusive_(is_inclusive) {
     }
 
-    const Expr &start() const {
+    [[nodiscard]] const Expr &start() const {
         return *start_;
     }
 
-    const Expr &end() const {
+    [[nodiscard]] const Expr &end() const {
         return *end_;
     }
 
-    bool is_inclusive() const {
+    [[nodiscard]] bool is_inclusive() const {
         return is_inclusive_;
     }
 
@@ -290,7 +290,7 @@ enum class PrimitiveTypeKind;
 /* represents a function call expression with arguments. */
 struct CallCastExpr : public Expr {
   public:
-    virtual ~CallCastExpr() =
+    ~CallCastExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new call cast expression node with the location
@@ -300,11 +300,11 @@ struct CallCastExpr : public Expr {
           arguments_(std::move(arguments)) {
     }
 
-    const Expr &function() const {
+    [[nodiscard]] const Expr &function() const {
         return *function_;
     }
 
-    const std::vector<std::unique_ptr<Expr>> &arguments() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &arguments() const {
         return arguments_;
     }
 
@@ -318,7 +318,7 @@ struct CallCastExpr : public Expr {
 /* represents a numeric conversion expression. */
 struct CastExpr : public Expr {
   public:
-    virtual ~CastExpr() = default;
+    ~CastExpr() override = default;
 
     CastExpr(SourceLocation location, PrimitiveTypeKind target_type,
              std::unique_ptr<Expr> operand)
@@ -326,11 +326,11 @@ struct CastExpr : public Expr {
           operand_(std::move(operand)) {
     }
 
-    PrimitiveTypeKind target_type() const {
+    [[nodiscard]] PrimitiveTypeKind target_type() const {
         return target_type_;
     }
 
-    const Expr &operand() const {
+    [[nodiscard]] const Expr &operand() const {
         return *operand_;
     }
 
@@ -342,7 +342,7 @@ struct CastExpr : public Expr {
 /* represents an indexing expression that accesses an element. */
 struct IndexExpr : public Expr {
   public:
-    virtual ~IndexExpr() =
+    ~IndexExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new index expression node with the location
@@ -352,11 +352,11 @@ struct IndexExpr : public Expr {
           index_(std::move(index)) {
     }
 
-    const Expr &collection() const {
+    [[nodiscard]] const Expr &collection() const {
         return *collection_;
     }
 
-    const std::vector<std::unique_ptr<Expr>> &indices() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &indices() const {
         return index_;
     }
 
@@ -371,7 +371,7 @@ struct IndexExpr : public Expr {
 /* represents an expression that accesses a named field. */
 struct FieldAccessExpr : public Expr {
   public:
-    virtual ~FieldAccessExpr() =
+    ~FieldAccessExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new field access expression node with the location
@@ -381,11 +381,11 @@ struct FieldAccessExpr : public Expr {
           field_name_(std::move(field_name)) {
     }
 
-    const Expr &object() const {
+    [[nodiscard]] const Expr &object() const {
         return *object_;
     }
 
-    const std::string &field_name() const {
+    [[nodiscard]] const std::string &field_name() const {
         return field_name_;
     }
 
@@ -400,7 +400,7 @@ struct FieldAccessExpr : public Expr {
 /* represents an array expression containing multiple elements. */
 struct ArrayExpr : public Expr {
   public:
-    virtual ~ArrayExpr() =
+    ~ArrayExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new array expression node with the location
@@ -409,7 +409,7 @@ struct ArrayExpr : public Expr {
         : Expr(location), elements_(std::move(elements)) {
     }
 
-    const std::vector<std::unique_ptr<Expr>> &elements() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &elements() const {
         return elements_;
     }
 
@@ -423,7 +423,7 @@ struct ArrayExpr : public Expr {
 // initialized to 0.
 struct RepeatArrayExpr : public Expr {
   public:
-    virtual ~RepeatArrayExpr() =
+    ~RepeatArrayExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     RepeatArrayExpr(SourceLocation location, std::unique_ptr<Expr> value_,
@@ -432,11 +432,11 @@ struct RepeatArrayExpr : public Expr {
           dimensions_(std::move(dimensions_)) {
     }
 
-    const Expr &value() const {
+    [[nodiscard]] const Expr &value() const {
         return *value_;
     }
 
-    const std::vector<std::unique_ptr<Expr>> &dimensions() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &dimensions() const {
         return dimensions_;
     }
 
@@ -450,7 +450,7 @@ struct RepeatArrayExpr : public Expr {
 /* represents an expression that constructs a struct value. */
 struct StructConstructionExpr : public Expr {
   public:
-    virtual ~StructConstructionExpr() =
+    ~StructConstructionExpr() override =
         default; // virtual destructor for proper cleanup of derived classes
 
     // create a new struct construction expression node with the location
@@ -461,11 +461,12 @@ struct StructConstructionExpr : public Expr {
           fields_(std::move(fields)) {
     }
 
-    const std::string &struct_name() const {
+    [[nodiscard]] const std::string &struct_name() const {
         return struct_name_;
     }
 
-    const std::vector<std::pair<std::string, std::unique_ptr<Expr>>> &
+    [[nodiscard]] const std::vector<
+        std::pair<std::string, std::unique_ptr<Expr>>> &
     fields() const {
         return fields_;
     }
@@ -492,7 +493,7 @@ struct StructConstructionExpr : public Expr {
 /* represents a statement that declares and initializes a variable. */
 struct VarDeclStmt : public Stmt {
   public:
-    virtual ~VarDeclStmt() = default;
+    ~VarDeclStmt() override = default;
 
     VarDeclStmt(SourceLocation location, bool is_mutable, std::string var_name,
                 std::unique_ptr<Type> var_type,
@@ -502,19 +503,19 @@ struct VarDeclStmt : public Stmt {
           initializer_(std::move(initializer)) {
     }
 
-    bool is_mutable() const {
+    [[nodiscard]] bool is_mutable() const {
         return is_mutable_;
     }
 
-    const std::string &var_name() const {
+    [[nodiscard]] const std::string &var_name() const {
         return var_name_;
     }
 
-    const Type *var_type() const {
+    [[nodiscard]] const Type *var_type() const {
         return var_type_.get();
     }
 
-    const Expr &initializer() const {
+    [[nodiscard]] const Expr &initializer() const {
         return *initializer_;
     }
 
@@ -537,22 +538,22 @@ enum class AssignmentOperation {
 /* represents a statement that assigns a value to an expression. */
 struct AssignmentStatement : public Stmt {
   public:
-    virtual ~AssignmentStatement() = default;
+    ~AssignmentStatement() override = default;
 
     AssignmentStatement(SourceLocation location, std::unique_ptr<Expr> lhs,
                         std::unique_ptr<Expr> rhs, AssignmentOperation op)
         : Stmt(location), lhs_(std::move(lhs)), rhs_(std::move(rhs)), op_(op) {
     }
 
-    const Expr &lhs() const {
+    [[nodiscard]] const Expr &lhs() const {
         return *lhs_;
     }
 
-    const Expr &rhs() const {
+    [[nodiscard]] const Expr &rhs() const {
         return *rhs_;
     }
 
-    AssignmentOperation op() const {
+    [[nodiscard]] AssignmentOperation op() const {
         return op_;
     }
 
@@ -565,14 +566,14 @@ struct AssignmentStatement : public Stmt {
 /* represents a statement that returns a value from a function. */
 struct RetStmt : public Stmt {
   public:
-    virtual ~RetStmt() = default;
+    ~RetStmt() override = default;
 
-    RetStmt(SourceLocation location,
-            std::unique_ptr<Expr> return_value = nullptr)
+    explicit RetStmt(SourceLocation location,
+                     std::unique_ptr<Expr> return_value = nullptr)
         : Stmt(location), return_value_(std::move(return_value)) {
     }
 
-    const Expr *return_value() const {
+    [[nodiscard]] const Expr *return_value() const {
         return return_value_.get();
     }
 
@@ -584,13 +585,13 @@ struct RetStmt : public Stmt {
 /* represents a statement formed from an expression. */
 struct ExprStmt : public Stmt {
   public:
-    virtual ~ExprStmt() = default;
+    ~ExprStmt() override = default;
 
     ExprStmt(SourceLocation location, std::unique_ptr<Expr> expr)
         : Stmt(location), expr_(std::move(expr)) {
     }
 
-    const Expr &expr() const {
+    [[nodiscard]] const Expr &expr() const {
         return *expr_;
     }
 
@@ -601,7 +602,7 @@ struct ExprStmt : public Stmt {
 /* represents a conditional statement with optional branches. */
 struct IfStmt : public Stmt {
   public:
-    virtual ~IfStmt() = default;
+    ~IfStmt() override = default;
 
     IfStmt(SourceLocation location, std::unique_ptr<Expr> condition,
            std::unique_ptr<Stmt> then_branch, std::unique_ptr<Stmt> else_branch)
@@ -610,15 +611,15 @@ struct IfStmt : public Stmt {
           else_branch_(std::move(else_branch)) {
     }
 
-    const Expr &condition() const {
+    [[nodiscard]] const Expr &condition() const {
         return *condition_;
     }
 
-    const Stmt &then_branch() const {
+    [[nodiscard]] const Stmt &then_branch() const {
         return *then_branch_;
     }
 
-    const Stmt *else_branch() const {
+    [[nodiscard]] const Stmt *else_branch() const {
         return else_branch_.get();
     }
 
@@ -631,7 +632,7 @@ struct IfStmt : public Stmt {
 /* represents a loop that repeats while a condition is true. */
 struct WhileStmt : public Stmt {
   public:
-    virtual ~WhileStmt() = default;
+    ~WhileStmt() override = default;
 
     WhileStmt(SourceLocation location, std::unique_ptr<Expr> condition,
               std::unique_ptr<Stmt> body)
@@ -639,11 +640,11 @@ struct WhileStmt : public Stmt {
           body_(std::move(body)) {
     }
 
-    const Expr &condition() const {
+    [[nodiscard]] const Expr &condition() const {
         return *condition_;
     }
 
-    const Stmt &body() const {
+    [[nodiscard]] const Stmt &body() const {
         return *body_;
     }
 
@@ -659,7 +660,7 @@ struct WhileStmt : public Stmt {
 */
 struct ForStmt : public Stmt {
   public:
-    virtual ~ForStmt() = default;
+    ~ForStmt() override = default;
 
     ForStmt(SourceLocation location, std::string var_name,
             std::unique_ptr<Expr> iterable_, std::unique_ptr<Stmt> body)
@@ -667,15 +668,15 @@ struct ForStmt : public Stmt {
           iterable_(std::move(iterable_)), body_(std::move(body)) {
     }
 
-    const std::string &var_name() const {
+    [[nodiscard]] const std::string &var_name() const {
         return var_name_;
     }
 
-    const Expr &iterable() const {
+    [[nodiscard]] const Expr &iterable() const {
         return *iterable_;
     }
 
-    const Stmt &body() const {
+    [[nodiscard]] const Stmt &body() const {
         return *body_;
     }
 
@@ -689,7 +690,7 @@ struct ForStmt : public Stmt {
 /* represents a statement that exits the nearest loop. */
 struct BreakStmt : public Stmt {
   public:
-    virtual ~BreakStmt() = default;
+    ~BreakStmt() override = default;
 
     explicit BreakStmt(SourceLocation location) : Stmt(location) {
     }
@@ -698,7 +699,7 @@ struct BreakStmt : public Stmt {
 /* represents a statement that skips to the next loop iteration. */
 struct ContinueStmt : public Stmt {
   public:
-    virtual ~ContinueStmt() = default;
+    ~ContinueStmt() override = default;
 
     explicit ContinueStmt(SourceLocation location) : Stmt(location) {
     }
@@ -708,14 +709,14 @@ struct ContinueStmt : public Stmt {
 // anything in a block { statment* ; }
 struct BlockStmt : public Stmt {
   public:
-    virtual ~BlockStmt() = default;
+    ~BlockStmt() override = default;
 
     BlockStmt(SourceLocation location,
               std::vector<std::unique_ptr<Stmt>> statements)
         : Stmt(location), statements_(std::move(statements)) {
     }
 
-    const std::vector<std::unique_ptr<Stmt>> &statements() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Stmt>> &statements() const {
         return statements_;
     }
 
@@ -733,15 +734,15 @@ struct ParamDecl {
           param_type_(std::move(param_type)) {
     }
 
-    SourceLocation location() const {
+    [[nodiscard]] SourceLocation location() const {
         return location_;
     }
 
-    const std::string &param_name() const {
+    [[nodiscard]] const std::string &param_name() const {
         return param_name_;
     }
 
-    const Type &param_type() const {
+    [[nodiscard]] const Type &param_type() const {
         return *param_type_;
     }
 
@@ -761,15 +762,15 @@ struct StructFieldDecl {
           struct_param_type_(std::move(struct_param_type)) {
     }
 
-    SourceLocation location() const {
+    [[nodiscard]] SourceLocation location() const {
         return location_;
     }
 
-    const std::string &field_name() const {
+    [[nodiscard]] const std::string &field_name() const {
         return struct_param_name_;
     }
 
-    const Type &field_type() const {
+    [[nodiscard]] const Type &field_type() const {
         return *struct_param_type_;
     }
 
@@ -782,7 +783,7 @@ struct StructFieldDecl {
 // represents function declaration
 struct FunctionDecl : public Decl {
   public:
-    virtual ~FunctionDecl() = default;
+    ~FunctionDecl() override = default;
 
     FunctionDecl(SourceLocation location, std::string function_name,
                  std::vector<ParamDecl> parameters,
@@ -793,19 +794,19 @@ struct FunctionDecl : public Decl {
           return_type_(std::move(return_type)), body_(std::move(body)) {
     }
 
-    const std::string &function_name() const {
+    [[nodiscard]] const std::string &function_name() const {
         return function_name_;
     }
 
-    const std::vector<ParamDecl> &parameters() const {
+    [[nodiscard]] const std::vector<ParamDecl> &parameters() const {
         return parameters_;
     }
 
-    const Type &return_type() const {
+    [[nodiscard]] const Type &return_type() const {
         return *return_type_;
     }
 
-    const BlockStmt &body() const {
+    [[nodiscard]] const BlockStmt &body() const {
         return *body_;
     }
 
@@ -819,7 +820,7 @@ struct FunctionDecl : public Decl {
 // rep struct decl
 struct StructDecl : public Decl {
   public:
-    virtual ~StructDecl() = default;
+    ~StructDecl() override = default;
 
     StructDecl(SourceLocation location, std::string struct_name,
                std::vector<StructFieldDecl> fields)
@@ -827,11 +828,11 @@ struct StructDecl : public Decl {
           fields_(std::move(fields)) {
     }
 
-    const std::string &struct_name() const {
+    [[nodiscard]] const std::string &struct_name() const {
         return struct_name_;
     }
 
-    const std::vector<StructFieldDecl> &fields() const {
+    [[nodiscard]] const std::vector<StructFieldDecl> &fields() const {
         return fields_;
     }
 
@@ -859,7 +860,7 @@ struct PrimitiveType : public Type {
         : Type(location), primitive_type_(kind) {
     }
 
-    PrimitiveTypeKind primitive_type() const {
+    [[nodiscard]] PrimitiveTypeKind primitive_type() const {
         return primitive_type_;
     }
 
@@ -875,11 +876,11 @@ struct ArrayType : public Type {
           dimensions_(std::move(dimensions)) {
     }
 
-    const Type &element_type() const {
+    [[nodiscard]] const Type &element_type() const {
         return *element_type_;
     }
 
-    const std::vector<std::unique_ptr<Expr>> &dimensions() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &dimensions() const {
         return dimensions_;
     }
 
@@ -894,7 +895,7 @@ struct StructType : public Type {
         : Type(location), struct_name_(std::move(struct_name)) {
     }
 
-    const std::string &struct_name() const {
+    [[nodiscard]] const std::string &struct_name() const {
         return struct_name_;
     }
 
@@ -910,11 +911,11 @@ struct ReferenceType : public Type {
           is_mutable_(is_mutable) {
     }
 
-    const Type &referenced_type() const {
+    [[nodiscard]] const Type &referenced_type() const {
         return *referenced_type_;
     }
 
-    bool is_mutable() const {
+    [[nodiscard]] bool is_mutable() const {
         return is_mutable_;
     }
 
@@ -925,11 +926,12 @@ struct ReferenceType : public Type {
 
 class Program {
   public:
-    Program(std::vector<std::unique_ptr<Decl>> declarations)
+    explicit Program(std::vector<std::unique_ptr<Decl>> declarations)
         : declarations_(std::move(declarations)) {
     }
 
-    const std::vector<std::unique_ptr<Decl>> &declarations() const {
+    [[nodiscard]] const std::vector<std::unique_ptr<Decl>> &
+    declarations() const {
         return declarations_;
     }
 

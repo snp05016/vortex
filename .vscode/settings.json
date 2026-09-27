@@ -1,13 +1,41 @@
 {
+    // clangd does diagnostics (errors only), completion and formatting.
+    // cpptools stays installed for debugging only.
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.codeAnalysis.runAutomatically": false,
+
+    "clangd.path": "/opt/homebrew/opt/llvm/bin/clangd",
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/build",
+        "--background-index",
+        "--clang-tidy=false",
+        "--query-driver=/Applications/Xcode*.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/*",
+        "--header-insertion=iwyu",
+        "--completion-style=detailed",
+        "--function-arg-placeholders",
+        "--all-scopes-completion",
+        "--pch-storage=memory",
+        "-j=8"
+    ],
+    "clangd.onConfigChanged": "restart",
+
     "[c]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
         "editor.formatOnSave": true
     },
     "[cpp]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
-        "editor.formatOnSave": true
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+        "editor.formatOnSave": true,
+        "editor.inlayHints.enabled": "onUnlessPressed",
+        "editor.suggest.snippetsPreventQuickSuggestions": false
     },
-    "C_Cpp.clang_format_style": "file",
-    "C_Cpp.default.compilerPath": "/usr/bin/clang++",
-    "C_Cpp.default.cppStandard": "c++26"
+
+    "errorLens.enabledDiagnosticLevels": ["error"],
+
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureOnOpen": true,
+    "cmake.exportCompileCommandsFile": true,
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "cppcoreguidelines-special-member-functions"
+    ]
 }

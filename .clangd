@@ -1,0 +1,13 @@
+CompileFlags:
+  CompilationDatabase: build
+  Add: [-w] # editor shows errors only
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None
+InlayHints:
+  Enabled: true
+  ParameterNames: true
+  DeducedTypes: true
+  Designators: true
+Hover:
+  ShowAKA: true

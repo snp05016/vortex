@@ -19,9 +19,10 @@ std::unique_ptr<Stmt> parse_statement(const std::string &source) {
     return parser.parse_statement();
 }
 
-void expect_parser_error(std::string_view test_name, std::string source) {
+void expect_parser_error(std::string_view test_name,
+                         const std::string &source) {
     try {
-        auto statement = parse_statement(source);
+        auto const statement = parse_statement(source);
         (void)statement;
         fail(test_name, "source was accepted");
     } catch (const ParserError &) {
@@ -43,7 +44,7 @@ void test_assignment_dispatch() {
         {"count %= 2;", AssignmentOperation::RemainderAssign},
     };
     for (const AssignmentCase &test : cases) {
-        auto statement = parse_statement(test.source);
+        auto const statement = parse_statement(test.source);
         const auto *assignment =
             dynamic_cast<const AssignmentStatement *>(statement.get());
         if (!assignment || assignment->op() != test.expected ||
@@ -77,7 +78,7 @@ void test_assignment_dispatch() {
 }
 
 void test_expression_dispatch() {
-    auto statement = parse_statement("  run();");
+    auto const statement = parse_statement("  run();");
     const auto *expression = dynamic_cast<const ExprStmt *>(statement.get());
     if (!expression || expression->location().start != 2) {
         fail("expression dispatch",
@@ -101,7 +102,7 @@ void test_return_statements() {
 }
 
 void test_while_statement() {
-    auto statement = parse_statement("while ready { break; }");
+    auto const statement = parse_statement("while ready { break; }");
     const auto *loop = dynamic_cast<const WhileStmt *>(statement.get());
     const auto *body =
         loop ? dynamic_cast<const BlockStmt *>(&loop->body()) : nullptr;
@@ -112,7 +113,7 @@ void test_while_statement() {
 }
 
 void test_for_statement() {
-    auto statement = parse_statement("for index in 0..10 { continue; }");
+    auto const statement = parse_statement("for index in 0..10 { continue; }");
     const auto *loop = dynamic_cast<const ForStmt *>(statement.get());
     const auto *body =
         loop ? dynamic_cast<const BlockStmt *>(&loop->body()) : nullptr;
@@ -143,7 +144,7 @@ void test_invalid_statements() {
 }
 
 void test_if_without_else() {
-    auto statement = parse_statement("if ready {}");
+    auto const statement = parse_statement("if ready {}");
     const auto *if_statement = dynamic_cast<const IfStmt *>(statement.get());
     if (!if_statement) {
         fail("if without else", "statement was not parsed as an if");
@@ -158,7 +159,7 @@ void test_if_without_else() {
 }
 
 void test_if_else() {
-    auto statement = parse_statement("if ready {} else {}");
+    auto const statement = parse_statement("if ready {} else {}");
     const auto *if_statement = dynamic_cast<const IfStmt *>(statement.get());
     if (!if_statement ||
         !dynamic_cast<const BlockStmt *>(if_statement->else_branch())) {
@@ -167,7 +168,8 @@ void test_if_else() {
 }
 
 void test_then_block_statements() {
-    auto statement = parse_statement("if ready { let value = 1; run(); }");
+    auto const statement =
+        parse_statement("if ready { let value = 1; run(); }");
     const auto *if_statement = dynamic_cast<const IfStmt *>(statement.get());
     const auto *block =
         if_statement
@@ -180,7 +182,8 @@ void test_then_block_statements() {
 }
 
 void test_else_if_chain() {
-    auto statement = parse_statement("if first {} else if second {} else {}");
+    auto const statement =
+        parse_statement("if first {} else if second {} else {}");
     const auto *outer = dynamic_cast<const IfStmt *>(statement.get());
     const auto *nested =
         outer ? dynamic_cast<const IfStmt *>(outer->else_branch()) : nullptr;
@@ -194,7 +197,7 @@ void test_else_if_chain() {
 }
 
 void test_parenthesized_condition() {
-    auto statement = parse_statement("if (ready) {}");
+    auto const statement = parse_statement("if (ready) {}");
     const auto *if_statement = dynamic_cast<const IfStmt *>(statement.get());
     if (!if_statement ||
         !dynamic_cast<const Grp *>(&if_statement->condition())) {

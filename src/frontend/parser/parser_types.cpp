@@ -4,11 +4,11 @@
 /// for `[[i32; 2]; 3]`, it builds an outer array whose element is another
 /// array. named and reference types are not handled here yet.
 std::unique_ptr<Type> Parser::parse_type() {
-    Token type_token = peek();
+    Token const type_token = peek();
     if (type_token.kind == TokenKind::PUNC_LBRACKET) {
         return check_array_type();
     }
-    PrimitiveTypeKind kind;
+    PrimitiveTypeKind kind{};
     switch (type_token.kind) {
     case TokenKind::KW_VOID:
         kind = PrimitiveTypeKind::Void;
@@ -49,7 +49,7 @@ std::unique_ptr<Type> Parser::parse_type() {
 /// for `[f32; 2 + 2, 8]`, it keeps both dimension expressions in source order.
 /// missing dimensions and trailing dimension commas are syntax errors.
 std::unique_ptr<Type> Parser::check_array_type() {
-    Token type_token = peek();
+    Token const type_token = peek();
     if (type_token.kind != TokenKind::PUNC_LBRACKET) {
         return nullptr;
     }
@@ -83,4 +83,22 @@ std::unique_ptr<Type> Parser::check_array_type() {
     }
     return std::make_unique<ArrayType>(
         type_token.location, std::move(element_type), std::move(dimensions));
+}
+
+// if you have a reference type like `&mut i32`, this function will parse it and
+// return a ReferenceType object. If the next token is not a reference type, it
+// will return nullptr.
+std::unique_ptr<Type> Parser::parse_reference_type() {
+    Token const ref_token = peek();
+    if (ref_token.kind != TokenKind::OP_BITWISE_AND) {
+        return nullptr;
+    }
+    advance(); // consume '&'.
+    auto referenced_type = parse_type();
+    if (!referenced_type) {
+        ParserError::expected(peek().location, "type", "after '&'");
+    }
+    bool const is_mutable = match(TokenKind::KW_MUT);
+    return std::make_unique<ReferenceType>(
+        ref_token.location, std::move(referenced_type), is_mutable);
 }

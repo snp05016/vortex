@@ -4,7 +4,7 @@
 // :: is the scope resolution op, tells the function that its a member of the
 // class Lexer
 Lexer::Lexer(const char *source, std::size_t length)
-    : source(source), length(length), position(0) {
+    : source(source), length(length) {
 }
 
 void Lexer::skip_whitespace() {
@@ -44,7 +44,7 @@ Token Lexer::figure_out_token() {
             return Token{kind, SourceLocation{start, position - start},
                          source + start};
         };
-    auto check_two = [&](char first, char second, TokenKind kind) {
+    auto const check_two = [&](char first, char second, TokenKind kind) {
         if (position + 1 < length && source[position] == first &&
             source[position + 1] == second) {
             position += 2;
@@ -53,10 +53,11 @@ Token Lexer::figure_out_token() {
         return Token{TokenKind::INVALID_TOKEN, SourceLocation{start, 0},
                      nullptr};
     };
-    auto has_next = [&]() { // lambda functiosn to check fort he next chara
+    auto has_next = [&] { // lambda functiosn to check fort he next chara
         return position + 1 < length;
     };
-    auto matches = [&](char first, char second) { // string matching ffahhhhhh
+    auto const matches = [&](char first,
+                             char second) { // string matching ffahhhhhh
         return has_next() && source[position] == first &&
                source[position + 1] == second;
     };
@@ -68,52 +69,75 @@ Token Lexer::figure_out_token() {
             position++;
         }
         const std::string_view word(source + start, position - start);
-        if (word == "fn")
+        if (word == "fn") {
             return make_token(TokenKind::KW_FN);
-        if (word == "let")
+        }
+        if (word == "let") {
             return make_token(TokenKind::KW_LET);
-        if (word == "if")
+        }
+        if (word == "if") {
             return make_token(TokenKind::KW_IF);
-        if (word == "else")
+        }
+        if (word == "else") {
             return make_token(TokenKind::KW_ELSE);
-        if (word == "while")
+        }
+        if (word == "while") {
             return make_token(TokenKind::KW_WHILE);
-        if (word == "for")
+        }
+        if (word == "for") {
             return make_token(TokenKind::KW_FOR);
-        if (word == "return")
+        }
+        if (word == "return") {
             return make_token(TokenKind::KW_RETURN);
-        if (word == "struct")
+        }
+        if (word == "struct") {
             return make_token(TokenKind::KW_STRUCT);
-        if (word == "mut")
+        }
+        if (word == "mut") {
             return make_token(TokenKind::KW_MUT);
-        if (word == "in")
+        }
+        if (word == "in") {
             return make_token(TokenKind::KW_IN);
-        if (word == "break")
+        }
+        if (word == "break") {
             return make_token(TokenKind::KW_BREAK);
-        if (word == "continue")
+        }
+        if (word == "continue") {
             return make_token(TokenKind::KW_CONTINUE);
-        if (word == "void")
+        }
+        if (word == "void") {
             return make_token(TokenKind::KW_VOID);
-        if (word == "bool")
+        }
+        if (word == "bool") {
             return make_token(TokenKind::KW_BOOL);
-        if (word == "char")
+        }
+        if (word == "char") {
             return make_token(TokenKind::KW_CHAR);
-        if (word == "i32")
+        }
+        if (word == "i32") {
             return make_token(TokenKind::KW_I32);
-        if (word == "u32")
+        }
+        if (word == "u32") {
             return make_token(TokenKind::KW_U32);
-        if (word == "usize")
+        }
+        if (word == "usize") {
             return make_token(TokenKind::KW_USIZE);
-        if (word == "f32")
+        }
+        if (word == "f32") {
             return make_token(TokenKind::KW_F32);
-        if (word == "f64")
+        }
+        if (word == "f64") {
             return make_token(TokenKind::KW_F64);
-        if (word == "String")
+        }
+        if (word == "String") {
             return make_token(TokenKind::KW_STRING);
-        if (word == "true")
+        }
+        if (word == "true") {
             return make_token(TokenKind::LIT_TRUE);
-        if (word == "false")
+        }
+        if (word == "false") {
             return make_token(TokenKind::LIT_FALSE);
+        }
         return make_token(TokenKind::IDENTIFIER);
     }
     // Integer and floating-point literals
@@ -209,44 +233,57 @@ Token Lexer::figure_out_token() {
     }
     if (is_operator(current_char)) {
         if (Token token = check_two('=', '=', TokenKind::OP_EQUAL);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('!', '=', TokenKind::OP_NOT_EQUAL);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('<', '=', TokenKind::OP_LESS_EQUAL);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('>', '=', TokenKind::OP_GREATER_EQUAL);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('&', '&', TokenKind::OP_LOGICAL_AND);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('|', '|', TokenKind::OP_LOGICAL_OR);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('<', '<', TokenKind::OP_LEFT_SHIFT);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('>', '>', TokenKind::OP_RIGHT_SHIFT);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('+', '=', TokenKind::OP_PLUS_ASSIGN);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('-', '=', TokenKind::OP_MINUS_ASSIGN);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('*', '=', TokenKind::OP_MULTIPLY_ASSIGN);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('/', '=', TokenKind::OP_DIVIDE_ASSIGN);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
         if (Token token = check_two('%', '=', TokenKind::OP_MODULO_ASSIGN);
-            token.kind != TokenKind::INVALID_TOKEN)
+            token.kind != TokenKind::INVALID_TOKEN) {
             return token;
+        }
     }
     if (is_operator(current_char)) {
         position++;
@@ -315,7 +352,7 @@ Token Lexer::figure_out_token() {
 
 Token Lexer::next_token() {
     while (position < length) {
-        char current_char = source[position];
+        char const current_char = source[position];
         if (is_whitespace(current_char)) {
             skip_whitespace();
             continue;
@@ -333,7 +370,7 @@ Token Lexer::next_token() {
         return figure_out_token();
     }
     // If we reach the end of the source, return an end-of-file token
-    Token token;
+    Token token{};
     token.kind = TokenKind::EOF_TOKEN;
     token.location.start = position;
     token.location.length = 0; // Assuming single character for invalid token

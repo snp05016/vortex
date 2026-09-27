@@ -1,0 +1,7 @@
+# test harnesses use a global failure counter, empty catches for expected
+# parser errors, and let unexpected exceptions escape main to fail the run.
+InheritParentConfig: true
+Checks: >
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -bugprone-empty-catch,
+  -bugprone-exception-escape

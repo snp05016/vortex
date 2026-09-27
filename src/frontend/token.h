@@ -98,7 +98,7 @@ struct Token {
     SourceLocation location;
     const char *text; // pointer to the text of the token
 
-    std::string current_token_string() const {
-        return std::string(text, location.length);
+    [[nodiscard]] std::string current_token_string() const {
+        return {text, location.length};
     }
 };

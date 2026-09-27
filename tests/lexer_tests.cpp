@@ -216,7 +216,7 @@ void test_invalid_input() {
 }
 
 void test_empty_input_and_stable_eof() {
-    constexpr std::string_view source = "";
+    constexpr std::string_view source;
     Lexer lexer(source.data(), source.size());
     const Token first = lexer.next_token();
     const Token second = lexer.next_token();

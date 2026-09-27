@@ -24,9 +24,10 @@ const Expr *initializer(const std::unique_ptr<Stmt> &statement) {
     return variable ? &variable->initializer() : nullptr;
 }
 
-void expect_parser_error(std::string_view test_name, std::string source) {
+void expect_parser_error(std::string_view test_name,
+                         const std::string &source) {
     try {
-        auto statement = parse_statement(source);
+        auto const statement = parse_statement(source);
         (void)statement;
         fail(test_name, "source was accepted");
     } catch (const ParserError &) {
@@ -102,14 +103,14 @@ void test_binary_operators_and_associativity() {
         {"let value = a >> b;", BinOp::RightShift},
     };
     for (const BinaryCase &test : cases) {
-        auto statement = parse_statement(test.source);
+        auto const statement = parse_statement(test.source);
         const auto *binary =
             dynamic_cast<const BinaryExpr *>(initializer(statement));
         if (!binary || binary->op() != test.expected) {
             fail("binary operator mapping", test.source);
         }
     }
-    auto statement = parse_statement("let value = a - b - c;");
+    auto const statement = parse_statement("let value = a - b - c;");
     const auto *outer =
         dynamic_cast<const BinaryExpr *>(initializer(statement));
     const auto *inner =
@@ -175,7 +176,7 @@ void test_unary_expressions() {
         {"let value = &mut value;", UnaryOp::MutReference},
     };
     for (const UnaryCase &test : cases) {
-        auto statement = parse_statement(test.source);
+        auto const statement = parse_statement(test.source);
         const auto *unary = dynamic_cast<const Unary *>(initializer(statement));
         if (!unary || unary->op() != test.expected) {
             fail("unary operator", test.source);
@@ -238,7 +239,7 @@ void test_literals_casts_and_grouping() {
 }
 
 void test_repeat_array_dimensions() {
-    auto statement = parse_statement("let values = [0; 2 + 2, 8];");
+    auto const statement = parse_statement("let values = [0; 2 + 2, 8];");
     const auto *repeat =
         dynamic_cast<const RepeatArrayExpr *>(initializer(statement));
     if (!repeat || repeat->dimensions().size() != 2 ||
@@ -263,7 +264,7 @@ void test_malformed_expressions() {
 }
 
 void test_ranges() {
-    auto statement = parse_statement("let values = 0..=10;");
+    auto const statement = parse_statement("let values = 0..=10;");
     const auto *range = dynamic_cast<const RangeExpr *>(initializer(statement));
     if (!range || !range->is_inclusive()) {
         fail("inclusive range", "inclusive range node is missing");

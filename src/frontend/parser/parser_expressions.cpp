@@ -55,8 +55,8 @@ inline std::string decode_string_literal(const Token &token) {
 /// for `&mut values[index]`, it preserves the mutable reference operation.
 /// postfix access is parsed before the prefix node is built.
 std::unique_ptr<Expr> Parser::parse_unary() {
-    Token tok = peek();
-    UnaryOp op;
+    Token const tok = peek();
+    UnaryOp op{};
 
     switch (tok.kind) {
     case TokenKind::OP_MINUS:
@@ -109,9 +109,9 @@ std::unique_ptr<Expr> Parser::parse_unary() {
 std::unique_ptr<Expr> Parser::parse_postfix() {
     auto expression = parse_primary();
     while (true) {
-        Token suffix = peek();
+        Token const suffix = peek();
         if (suffix.kind == TokenKind::PUNC_LPAREN) {
-            SourceLocation expression_location = expression->location();
+            SourceLocation const expression_location = expression->location();
             advance();
             std::vector<std::unique_ptr<Expr>> arguments;
             if (!check(TokenKind::PUNC_RPAREN)) {
@@ -133,7 +133,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             continue;
         }
         if (suffix.kind == TokenKind::PUNC_LBRACKET) {
-            SourceLocation expression_location = expression->location();
+            SourceLocation const expression_location = expression->location();
             advance();
             if (check(TokenKind::PUNC_RBRACKET)) {
                 ParserError::expected(peek().location, "index expression");
@@ -155,9 +155,9 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             continue;
         }
         if (suffix.kind == TokenKind::PUNC_DOT) {
-            SourceLocation expression_location = expression->location();
+            SourceLocation const expression_location = expression->location();
             advance();
-            Token field = peek();
+            Token const field = peek();
             if (field.kind != TokenKind::IDENTIFIER) {
                 ParserError::expected(field.location, "field name",
                                       "after '.'");
@@ -176,7 +176,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
 /// for `[0; 2, 3]`, it builds a repeat-array expression with two dimensions.
 /// type checking is left to later stages; this function only preserves syntax.
 std::unique_ptr<Expr> Parser::parse_primary() {
-    Token tok = peek();
+    Token const tok = peek();
     PrimitiveTypeKind cast_type = PrimitiveTypeKind::Void;
     bool is_cast = false;
 
@@ -222,8 +222,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (tok.kind == TokenKind::LIT_INT) {
         advance(); // consume the integer literal.
         const std::string text = tok.current_token_string();
-        const bool is_binary = text.rfind("0b", 0) == 0;
-        std::uint64_t value;
+        const bool is_binary = text.starts_with("0b");
+        std::uint64_t value = 0;
         try {
             value = is_binary ? std::stoull(text.substr(2), nullptr, 2)
                               : std::stoull(text, nullptr, 10);
@@ -232,9 +232,10 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         }
         return std::make_unique<Literal>(tok.location, LiteralKind::Integer,
                                          value);
-    } else if (tok.kind == TokenKind::LIT_FLOAT) {
+    }
+    if (tok.kind == TokenKind::LIT_FLOAT) {
         advance();
-        double value;
+        double value = 0.0;
         try {
             value = std::stod(tok.current_token_string());
         } catch (const std::exception &) {
@@ -242,11 +243,13 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         }
         return std::make_unique<Literal>(tok.location, LiteralKind::Float,
                                          value);
-    } else if (tok.kind == TokenKind::LIT_STRING) {
+    }
+    if (tok.kind == TokenKind::LIT_STRING) {
         advance();
         return std::make_unique<Literal>(tok.location, LiteralKind::String,
                                          decode_string_literal(tok));
-    } else if (tok.kind == TokenKind::LIT_CHAR) {
+    }
+    if (tok.kind == TokenKind::LIT_CHAR) {
         advance();
         const std::string value = decode_string_literal(tok);
         if (value.size() != 1) {
@@ -254,12 +257,13 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         }
         return std::make_unique<Literal>(tok.location, LiteralKind::Char,
                                          value[0]);
-    } else if (tok.kind == TokenKind::LIT_TRUE ||
-               tok.kind == TokenKind::LIT_FALSE) {
+    }
+    if (tok.kind == TokenKind::LIT_TRUE || tok.kind == TokenKind::LIT_FALSE) {
         advance();
         return std::make_unique<Literal>(tok.location, LiteralKind::Boolean,
                                          tok.kind == TokenKind::LIT_TRUE);
-    } else if (tok.kind == TokenKind::IDENTIFIER) {
+    }
+    if (tok.kind == TokenKind::IDENTIFIER) {
         advance(); // consume the identifier.
 
         if (check(TokenKind::PUNC_LBRACE) &&
@@ -273,7 +277,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
                                      "struct expression with zero fields");
             }
             while (true) {
-                Token field = peek();
+                Token const field = peek();
                 if (field.kind != TokenKind::IDENTIFIER) {
                     ParserError::expected(field.location, "struct field name");
                 }
@@ -297,7 +301,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
         return std::make_unique<Identifier>(tok.location,
                                             tok.current_token_string());
-    } else if (tok.kind == TokenKind::PUNC_LPAREN) {
+    }
+    if (tok.kind == TokenKind::PUNC_LPAREN) {
         advance(); // consume '('.
 
         auto expr = parse_expression();
@@ -307,7 +312,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
         expect(TokenKind::PUNC_RPAREN, "')'");
         return std::make_unique<Grp>(tok.location, std::move(expr));
-    } else if (tok.kind == TokenKind::PUNC_LBRACKET) {
+    }
+    if (tok.kind == TokenKind::PUNC_LBRACKET) {
         advance();
         if (check(TokenKind::PUNC_RBRACKET)) {
             ParserError::invalid(tok.location, "empty array expression");
@@ -352,8 +358,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
         expect(TokenKind::PUNC_RBRACKET, "']'");
         return std::make_unique<ArrayExpr>(tok.location, std::move(elements));
-    } else {
-        // rejects tokens that cannot begin a primary expression.
-        ParserError::unexpected(tok.location, "token in primary expression");
     }
+    // rejects tokens that cannot begin a primary expression.
+    ParserError::unexpected(tok.location, "token in primary expression");
 }

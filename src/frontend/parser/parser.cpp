@@ -81,7 +81,7 @@ Parser::Parser(const char *source, std::size_t length) : lexer(source, length) {
 /// this is currently a debugging entry point and does not build a program ast.
 void Parser::parse() {
     while (true) {
-        Token token = lexer.next_token();
+        Token const token = lexer.next_token();
         if (token.kind == TokenKind::EOF_TOKEN) {
             break;
         }
@@ -89,8 +89,7 @@ void Parser::parse() {
         // statement and expression dispatch will be added here later.
         std::cout << "Token kind: " << token.current_token_string()
                   << ", Location: " << token.location.start << "-"
-                  << (token.location.start + token.location.length)
-                  << std::endl;
+                  << (token.location.start + token.location.length) << '\n';
     }
 }
 
@@ -100,7 +99,7 @@ void Parser::parse() {
 /// precedence.
 std::unique_ptr<Expr> Parser::parse_expression() {
     auto start = parse_binary_expression(2);
-    Token range_operator = peek();
+    Token const range_operator = peek();
     if (range_operator.kind != TokenKind::PUNC_RANGE &&
         range_operator.kind != TokenKind::PUNC_INCL_RANGE) {
         return start;
@@ -123,10 +122,9 @@ std::unique_ptr<Expr> Parser::parse_binary_expression(int min_precedence) {
     auto left = parse_unary();
     bool saw_equality_or_comparison = false;
     while (true) {
-        Token operator_token = peek();
-        auto precedence = operator_precedence.find(operator_token.kind);
-        if (precedence == operator_precedence.end() ||
-            precedence->second < min_precedence) {
+        Token const operator_token = peek();
+        int const precedence = operator_precedence(operator_token.kind);
+        if (precedence < 0 || precedence < min_precedence) {
             break;
         }
         auto op = binary_operator(operator_token.kind);
@@ -138,7 +136,7 @@ std::unique_ptr<Expr> Parser::parse_binary_expression(int min_precedence) {
                                  "chained comparison or equality expression");
         }
         advance();
-        auto right = parse_binary_expression(precedence->second + 1);
+        auto right = parse_binary_expression(precedence + 1);
         if (is_equality_or_comparison(*op) &&
             is_unparenthesized_equality_or_comparison(*right)) {
             ParserError::invalid(operator_token.location,

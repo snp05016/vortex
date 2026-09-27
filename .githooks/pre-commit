@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# formats staged c/c++ files under src/ and tests/ with clang-format, then re-stages them.
+set -euo pipefail
+
+formatter="${CLANG_FORMAT:-clang-format}"
+if ! command -v "$formatter" >/dev/null 2>&1; then
+    echo "pre-commit: clang-format was not found. Install it or set CLANG_FORMAT." >&2
+    exit 1
+fi
+
+# ponytail: formats and re-adds whole files, so a partially staged file gets its unstaged hunks committed too.
+git diff --cached --name-only --diff-filter=ACMR -z -- src tests |
+    while IFS= read -r -d '' file; do
+        case "$file" in
+            *.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp|*.hxx)
+                "$formatter" -i --style=file "$file"
+                git add -- "$file"
+                ;;
+        esac
+    done

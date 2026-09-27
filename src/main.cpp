@@ -1,13 +1,16 @@
 #include "frontend/debugVisitor.h"
 #include "frontend/lexer.h"
 #include "frontend/parser/parser.h"
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <string>
 #include <string_view>
 
-int main(int argc, char **argv) {
+namespace {
+
+int run(int argc, char *const *argv) {
     if (argc != 2) {
         std::cerr << "Usage: vortex_debug <source-file>\n";
         return 1;
@@ -36,4 +39,15 @@ int main(int argc, char **argv) {
         }
     }
     return 0;
+}
+
+} // namespace
+
+int main(int argc, char *const *argv) {
+    try {
+        return run(argc, argv);
+    } catch (const std::exception &error) {
+        std::cerr << "error: " << error.what() << '\n';
+        return 1;
+    }
 }

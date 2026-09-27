@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(Vortex LANGUAGES CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 enable_testing()
 
 add_library(vortex_compiler

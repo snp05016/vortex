@@ -17,22 +17,21 @@ class ParserError : public std::runtime_error {
     /// callers can still read the message through the standard exception
     /// interface.
     ParserError(ParserErrorKind kind, SourceLocation location,
-                std::string message)
-        : std::runtime_error(std::move(message)), kind_(kind),
-          location_(location) {
+                const std::string &message)
+        : std::runtime_error(message), kind_(kind), location_(location) {
     }
 
     /// returns the broad category assigned to this parser error.
     /// for an empty `point {}` expression, the category is invalid syntax.
     /// the category lets diagnostics react without comparing message text.
-    ParserErrorKind kind() const {
+    [[nodiscard]] ParserErrorKind kind() const {
         return kind_;
     }
 
     /// returns the source span associated with this parser error.
     /// for `let = 1;`, it points where the variable name was expected.
     /// the span uses byte offsets from the original source buffer.
-    SourceLocation location() const {
+    [[nodiscard]] SourceLocation location() const {
         return location_;
     }
 
@@ -45,11 +44,10 @@ class ParserError : public std::runtime_error {
         std::string message = "expected ";
         message += expected_value;
         if (!context.empty()) {
-            message += " ";
+            message += ' ';
             message += context;
         }
-        throw ParserError(ParserErrorKind::Expected, location,
-                          std::move(message));
+        throw ParserError(ParserErrorKind::Expected, location, message);
     }
 
     /// raises an error when the current token cannot begin the requested
@@ -60,8 +58,7 @@ class ParserError : public std::runtime_error {
                                         std::string_view value) {
         std::string message = "unexpected ";
         message += value;
-        throw ParserError(ParserErrorKind::Unexpected, location,
-                          std::move(message));
+        throw ParserError(ParserErrorKind::Unexpected, location, message);
     }
 
     /// raises an error for syntax that has the right pieces in a forbidden
@@ -72,8 +69,7 @@ class ParserError : public std::runtime_error {
                                      std::string_view value) {
         std::string message = "invalid ";
         message += value;
-        throw ParserError(ParserErrorKind::Invalid, location,
-                          std::move(message));
+        throw ParserError(ParserErrorKind::Invalid, location, message);
     }
 
   private:
