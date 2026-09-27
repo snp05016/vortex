@@ -8,7 +8,9 @@ namespace {
 inline std::string decode_string_literal(const Token &token) {
     const std::string text = token.current_token_string();
     std::string value;
-    value.reserve(text.size() - 2); // reserve will reserve space for the string without quotes
+    value.reserve(
+        text.size() -
+        2); // reserve will reserve space for the string without quotes
 
     for (std::size_t index = 1; index + 1 < text.size(); ++index) {
         if (text[index] != '\\') {
@@ -100,9 +102,10 @@ std::unique_ptr<Expr> Parser::parse_unary() {
     return std::make_unique<Unary>(tok.location, op, std::move(operand));
 }
 
-/// parses chained calls, indices, and field accesses after a primary expression.
-/// for `factory().items[row].value`, it builds each suffix from left to right.
-/// call and index trailing commas are rejected by the v0.1 grammar.
+/// parses chained calls, indices, and field accesses after a primary
+/// expression. for `factory().items[row].value`, it builds each suffix from
+/// left to right. call and index trailing commas are rejected by the v0.1
+/// grammar.
 std::unique_ptr<Expr> Parser::parse_postfix() {
     auto expression = parse_primary();
     while (true) {
@@ -118,15 +121,15 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
                         break;
                     }
                     if (check(TokenKind::PUNC_RPAREN)) {
-                        ParserError::invalid(
-                            peek().location, "trailing comma in function call");
+                        ParserError::invalid(peek().location,
+                                             "trailing comma in function call");
                     }
                 }
             }
             expect(TokenKind::PUNC_RPAREN, "')'");
-            expression = std::make_unique<CallCastExpr>(
-                expression_location, std::move(expression),
-                std::move(arguments));
+            expression = std::make_unique<CallCastExpr>(expression_location,
+                                                        std::move(expression),
+                                                        std::move(arguments));
             continue;
         }
         if (suffix.kind == TokenKind::PUNC_LBRACKET) {
@@ -142,8 +145,8 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
                     break;
                 }
                 if (check(TokenKind::PUNC_RBRACKET)) {
-                    ParserError::invalid(
-                        peek().location, "trailing comma in index expression");
+                    ParserError::invalid(peek().location,
+                                         "trailing comma in index expression");
                 }
             }
             expect(TokenKind::PUNC_RBRACKET, "']'");
@@ -157,7 +160,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             Token field = peek();
             if (field.kind != TokenKind::IDENTIFIER) {
                 ParserError::expected(field.location, "field name",
-                                        "after '.'");
+                                      "after '.'");
             }
             advance();
             expression = std::make_unique<FieldAccessExpr>(
@@ -267,13 +270,12 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
             if (check(TokenKind::PUNC_RBRACE)) {
                 ParserError::invalid(peek().location,
-                                       "struct expression with zero fields");
+                                     "struct expression with zero fields");
             }
             while (true) {
                 Token field = peek();
                 if (field.kind != TokenKind::IDENTIFIER) {
-                    ParserError::expected(field.location,
-                                            "struct field name");
+                    ParserError::expected(field.location, "struct field name");
                 }
 
                 advance();

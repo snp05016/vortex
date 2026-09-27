@@ -1,8 +1,8 @@
 #include "parser.h"
 
 /// parses a primitive type or recursively nested array type.
-/// for `[[i32; 2]; 3]`, it builds an outer array whose element is another array.
-/// named and reference types are not handled here yet.
+/// for `[[i32; 2]; 3]`, it builds an outer array whose element is another
+/// array. named and reference types are not handled here yet.
 std::unique_ptr<Type> Parser::parse_type() {
     Token type_token = peek();
     if (type_token.kind == TokenKind::PUNC_LBRACKET) {
@@ -61,7 +61,7 @@ std::unique_ptr<Type> Parser::check_array_type() {
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
         ParserError::expected(peek().location, "';'",
-                                "after array element type");
+                              "after array element type");
     }
     if (check(TokenKind::PUNC_RBRACKET)) {
         ParserError::expected(peek().location, "array dimension");
@@ -75,7 +75,7 @@ std::unique_ptr<Type> Parser::check_array_type() {
         }
         if (check(TokenKind::PUNC_RBRACKET)) {
             ParserError::invalid(peek().location,
-                                   "trailing comma in array type");
+                                 "trailing comma in array type");
         }
     }
     if (!match(TokenKind::PUNC_RBRACKET)) {

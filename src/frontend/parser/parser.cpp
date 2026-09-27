@@ -61,7 +61,8 @@ bool is_equality_or_comparison(BinOp op) {
 
 /// checks whether an expression directly contains equality or comparison.
 /// for `left < right`, it returns true, while `(left < right)` is a group.
-/// grouped expressions stay distinguishable so explicit parentheses are respected.
+/// grouped expressions stay distinguishable so explicit parentheses are
+/// respected.
 bool is_unparenthesized_equality_or_comparison(const Expr &expression) {
     const auto *binary = dynamic_cast<const BinaryExpr *>(&expression);
     return binary && is_equality_or_comparison(binary->op());
@@ -95,7 +96,8 @@ void Parser::parse() {
 
 /// parses one complete expression, including an optional range.
 /// for `start..=end`, it builds an inclusive range expression.
-/// ordinary operators are parsed first because ranges have the lowest precedence.
+/// ordinary operators are parsed first because ranges have the lowest
+/// precedence.
 std::unique_ptr<Expr> Parser::parse_expression() {
     auto start = parse_binary_expression(2);
     Token range_operator = peek();
@@ -115,7 +117,8 @@ std::unique_ptr<Expr> Parser::parse_expression() {
 
 /// parses binary operators at or above the requested precedence.
 /// for `2 + 3 * 4`, multiplication becomes the right child of addition.
-/// equality and comparison chains are rejected unless parentheses separate them.
+/// equality and comparison chains are rejected unless parentheses separate
+/// them.
 std::unique_ptr<Expr> Parser::parse_binary_expression(int min_precedence) {
     auto left = parse_unary();
     bool saw_equality_or_comparison = false;
@@ -132,14 +135,14 @@ std::unique_ptr<Expr> Parser::parse_binary_expression(int min_precedence) {
         }
         if (is_equality_or_comparison(*op) && saw_equality_or_comparison) {
             ParserError::invalid(operator_token.location,
-                                   "chained comparison or equality expression");
+                                 "chained comparison or equality expression");
         }
         advance();
         auto right = parse_binary_expression(precedence->second + 1);
         if (is_equality_or_comparison(*op) &&
             is_unparenthesized_equality_or_comparison(*right)) {
             ParserError::invalid(operator_token.location,
-                                   "chained comparison or equality expression");
+                                 "chained comparison or equality expression");
         }
         if (is_equality_or_comparison(*op)) {
             saw_equality_or_comparison = true;

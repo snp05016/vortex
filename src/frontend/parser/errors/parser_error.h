@@ -14,7 +14,8 @@ class ParserError : public std::runtime_error {
   public:
     /// creates a parser error with its category, source location, and message.
     /// for a missing `;` after `let value = 1`, it keeps the expected location.
-    /// callers can still read the message through the standard exception interface.
+    /// callers can still read the message through the standard exception
+    /// interface.
     ParserError(ParserErrorKind kind, SourceLocation location,
                 std::string message)
         : std::runtime_error(std::move(message)), kind_(kind),
@@ -47,12 +48,14 @@ class ParserError : public std::runtime_error {
             message += " ";
             message += context;
         }
-        throw ParserError(ParserErrorKind::Expected, location, std::move(message));
+        throw ParserError(ParserErrorKind::Expected, location,
+                          std::move(message));
     }
 
-    /// raises an error when the current token cannot begin the requested syntax.
-    /// for `let value = );`, it reports an unexpected token in the expression.
-    /// this function never returns, so parsing stops at the reported location.
+    /// raises an error when the current token cannot begin the requested
+    /// syntax. for `let value = );`, it reports an unexpected token in the
+    /// expression. this function never returns, so parsing stops at the
+    /// reported location.
     [[noreturn]] static void unexpected(SourceLocation location,
                                         std::string_view value) {
         std::string message = "unexpected ";
@@ -61,14 +64,16 @@ class ParserError : public std::runtime_error {
                           std::move(message));
     }
 
-    /// raises an error for syntax that has the right pieces in a forbidden form.
-    /// for `left < middle < right`, it reports an invalid comparison chain.
-    /// this function never returns and preserves the location of the invalid form.
+    /// raises an error for syntax that has the right pieces in a forbidden
+    /// form. for `left < middle < right`, it reports an invalid comparison
+    /// chain. this function never returns and preserves the location of the
+    /// invalid form.
     [[noreturn]] static void invalid(SourceLocation location,
                                      std::string_view value) {
         std::string message = "invalid ";
         message += value;
-        throw ParserError(ParserErrorKind::Invalid, location, std::move(message));
+        throw ParserError(ParserErrorKind::Invalid, location,
+                          std::move(message));
     }
 
   private:

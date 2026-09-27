@@ -165,6 +165,7 @@ void test_unary_expressions() {
         std::string source;
         UnaryOp expected;
     };
+
     const std::vector<UnaryCase> cases = {
         {"let value = -5;", UnaryOp::Negate},
         {"let value = +5;", UnaryOp::Positive},
@@ -194,7 +195,8 @@ void test_unary_expressions() {
     const auto *reference = dynamic_cast<const Unary *>(initializer(statement));
     if (!reference || reference->op() != UnaryOp::MutReference ||
         !dynamic_cast<const IndexExpr *>(&reference->operand())) {
-        fail("mutable reference", "mutable indexed reference was not preserved");
+        fail("mutable reference",
+             "mutable indexed reference was not preserved");
     }
 }
 

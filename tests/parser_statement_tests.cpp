@@ -33,6 +33,7 @@ void test_assignment_dispatch() {
         std::string source;
         AssignmentOperation expected;
     };
+
     const std::vector<AssignmentCase> cases = {
         {"count = 1;", AssignmentOperation::Assign},
         {"count += 1;", AssignmentOperation::AddAssign},
@@ -55,9 +56,8 @@ void test_assignment_dispatch() {
     const auto *assignment =
         dynamic_cast<const AssignmentStatement *>(statement.get());
     const auto *field =
-        assignment
-            ? dynamic_cast<const FieldAccessExpr *>(&assignment->lhs())
-            : nullptr;
+        assignment ? dynamic_cast<const FieldAccessExpr *>(&assignment->lhs())
+                   : nullptr;
     const auto *index =
         field ? dynamic_cast<const IndexExpr *>(&field->object()) : nullptr;
     if (!field || field->field_name() != "x" || !index) {
@@ -67,9 +67,8 @@ void test_assignment_dispatch() {
 
     statement = parse_statement("matrix[row, column] *= scale;");
     assignment = dynamic_cast<const AssignmentStatement *>(statement.get());
-    index = assignment
-                ? dynamic_cast<const IndexExpr *>(&assignment->lhs())
-                : nullptr;
+    index = assignment ? dynamic_cast<const IndexExpr *>(&assignment->lhs())
+                       : nullptr;
     if (!index || index->indices().size() != 2 ||
         assignment->op() != AssignmentOperation::MultiplyAssign) {
         fail("multidimensional assignment target",
@@ -81,7 +80,8 @@ void test_expression_dispatch() {
     auto statement = parse_statement("  run();");
     const auto *expression = dynamic_cast<const ExprStmt *>(statement.get());
     if (!expression || expression->location().start != 2) {
-        fail("expression dispatch", "call was not parsed as an expression statement");
+        fail("expression dispatch",
+             "call was not parsed as an expression statement");
     }
 }
 
@@ -180,8 +180,7 @@ void test_then_block_statements() {
 }
 
 void test_else_if_chain() {
-    auto statement =
-        parse_statement("if first {} else if second {} else {}");
+    auto statement = parse_statement("if first {} else if second {} else {}");
     const auto *outer = dynamic_cast<const IfStmt *>(statement.get());
     const auto *nested =
         outer ? dynamic_cast<const IfStmt *>(outer->else_branch()) : nullptr;
