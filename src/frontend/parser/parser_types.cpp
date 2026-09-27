@@ -1,14 +1,24 @@
 #include "parser.h"
 
-/// parses a primitive type or recursively nested array type.
-/// for `[[i32; 2]; 3]`, it builds an outer array whose element is another
-/// array. named and reference types are not handled here yet.
+/// parses any type and delegates recursive forms to their own parser.
+/// for `&mut [Point; 4]`, it preserves the reference, array, and named type.
 std::unique_ptr<Type> Parser::parse_type() {
     Token const type_token = peek();
-    if (type_token.kind == TokenKind::PUNC_LBRACKET) {
-        return check_array_type();
+    if (type_token.kind == TokenKind::OP_BITWISE_AND) {
+        return parse_reference_type(); // parsing the refernce type that is the
+                                       // &mut [Point; 4] in the example
     }
-    PrimitiveTypeKind kind{};
+    if (type_token.kind == TokenKind::PUNC_LBRACKET) {
+        return check_array_type(); // parsing the array type that is the [Point;
+                                   // 4] in the example
+    }
+    if (type_token.kind == TokenKind::IDENTIFIER) {
+        return parse_named_types(); // parsing the named type that is the Point
+                                    // in the example
+    }
+
+    PrimitiveTypeKind kind{}; // {} for default initialization to avoid
+                              // uninitialized variable warning
     switch (type_token.kind) {
     case TokenKind::KW_VOID:
         kind = PrimitiveTypeKind::Void;
@@ -85,31 +95,32 @@ std::unique_ptr<Type> Parser::check_array_type() {
         type_token.location, std::move(element_type), std::move(dimensions));
 }
 
-// if you have a reference type like `&mut i32`, this function will parse it and
-// return a ReferenceType object. If the next token is not a reference type, it
-// will return nullptr.
+/// parses `&type` or `&mut type`, including recursively nested types.
+/// `mut` belongs directly after `&`, before the referenced type.
 std::unique_ptr<Type> Parser::parse_reference_type() {
     Token const ref_token = peek();
     if (ref_token.kind != TokenKind::OP_BITWISE_AND) {
         return nullptr;
     }
     advance(); // consume '&'.
+    bool const is_mutable = match(TokenKind::KW_MUT);
     auto referenced_type = parse_type();
     if (!referenced_type) {
-        ParserError::expected(peek().location, "type", "after '&'");
+        ParserError::expected(peek().location, "type",
+                              "after reference marker");
     }
-    bool const is_mutable = match(TokenKind::KW_MUT);
     return std::make_unique<ReferenceType>(
         ref_token.location, std::move(referenced_type), is_mutable);
 }
 
-// parses either a reference type or a regular type, it first tries to parse a
-// reference type, if that fails then it tries to parse a regular type
-// if both fail, then god help us all
-std::unique_ptr<Type> Parser::parse_type_or_reference() {
-    auto type = parse_reference_type();
-    if (type) {
-        return type;
+/// parses an identifier as a named type and preserves its spelling.
+/// for `Point`, name resolution later decides which struct it refers to.
+std::unique_ptr<Type> Parser::parse_named_types() {
+    Token const name_token = peek();
+    if (name_token.kind != TokenKind::IDENTIFIER) {
+        return nullptr;
     }
-    return parse_type();
+    advance();
+    return std::make_unique<StructType>(name_token.location,
+                                        name_token.current_token_string());
 }

@@ -41,16 +41,6 @@
         "editorUnnecessaryCode.opacity": "#000000ff"
     },
 
-    // after each save of a c/c++ source, apply clang-tidy fixes (nodiscard, const, override, ...).
-    "emeraldwalk.runonsave": {
-        "commands": [
-            {
-                "match": "\\.(c|cc|cpp|cxx)$",
-                "cmd": "${workspaceFolder}/scripts/tidy-fix.sh '${file}'"
-            }
-        ]
-    },
-
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureOnOpen": true,
     "cmake.exportCompileCommandsFile": true,

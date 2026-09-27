@@ -71,6 +71,64 @@ void test_nested_array_type() {
     }
 }
 
+void test_named_type() {
+    auto const type = parse_type("Point");
+    const auto *named = dynamic_cast<const StructType *>(type.get());
+    if (!named || named->struct_name() != "Point") {
+        fail("named type", "identifier was not preserved as a named type");
+    }
+}
+
+void test_reference_types() {
+    auto const shared_type = parse_type("&Point");
+    const auto *shared = dynamic_cast<const ReferenceType *>(shared_type.get());
+    const auto *named =
+        shared ? dynamic_cast<const StructType *>(&shared->referenced_type())
+               : nullptr;
+    if (!shared || shared->is_mutable() || !named ||
+        named->struct_name() != "Point") {
+        fail("shared reference", "&Point was not preserved correctly");
+    }
+
+    auto const mutable_type = parse_type("&mut [f32; 4 * 2, 8]");
+    const auto *mutable_reference =
+        dynamic_cast<const ReferenceType *>(mutable_type.get());
+    const auto *array = mutable_reference
+                            ? dynamic_cast<const ArrayType *>(
+                                  &mutable_reference->referenced_type())
+                            : nullptr;
+    if (!mutable_reference || !mutable_reference->is_mutable() || !array ||
+        array->dimensions().size() != 2) {
+        fail("mutable reference",
+             "&mut array type was not preserved correctly");
+    }
+}
+
+void test_recursive_type_forms() {
+    auto const array_type = parse_type("[Point; 4]");
+    const auto *array = dynamic_cast<const ArrayType *>(array_type.get());
+    const auto *element =
+        array ? dynamic_cast<const StructType *>(&array->element_type())
+              : nullptr;
+    if (!array || !element || element->struct_name() != "Point") {
+        fail("named array element", "array did not preserve its named element");
+    }
+
+    auto const nested_type = parse_type("& &i32");
+    const auto *outer = dynamic_cast<const ReferenceType *>(nested_type.get());
+    const auto *inner =
+        outer ? dynamic_cast<const ReferenceType *>(&outer->referenced_type())
+              : nullptr;
+    if (!outer || !inner) {
+        fail("nested reference", "recursive reference type was not parsed");
+    }
+}
+
+void test_invalid_reference_types() {
+    expect_parser_error("missing referenced type", "&");
+    expect_parser_error("missing mutable referenced type", "&mut");
+}
+
 void test_invalid_array_types() {
     expect_parser_error("missing dimension", "[i32;]");
     expect_parser_error("missing semicolon and dimension", "[i32]");
@@ -97,6 +155,10 @@ int main() {
     test_array_type();
     test_expression_dimensions();
     test_nested_array_type();
+    test_named_type();
+    test_reference_types();
+    test_recursive_type_forms();
+    test_invalid_reference_types();
     test_invalid_array_types();
     test_repeat_array_remains_expression();
     if (failures != 0) {
