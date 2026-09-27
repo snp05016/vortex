@@ -129,6 +129,9 @@ void test_postfix_chaining() {
         fail("postfix chaining", "outer field access is missing");
         return;
     }
+    if (value->location().start != 12) {
+        fail("postfix location", "postfix chain did not keep the callee start");
+    }
     const auto *index = dynamic_cast<const IndexExpr *>(&value->object());
     if (!index || index->indices().size() != 2) {
         fail("postfix chaining", "two-dimensional index is missing");
@@ -155,6 +158,106 @@ void test_postfix_chaining() {
             fail("call arguments", "argument expression was not parsed");
         }
     }
+}
+
+void test_unary_expressions() {
+    struct UnaryCase {
+        std::string source;
+        UnaryOp expected;
+    };
+    const std::vector<UnaryCase> cases = {
+        {"let value = -5;", UnaryOp::Negate},
+        {"let value = +5;", UnaryOp::Positive},
+        {"let value = !ready;", UnaryOp::LogicalNot},
+        {"let value = ~flags;", UnaryOp::BitwiseNot},
+        {"let value = &value;", UnaryOp::Reference},
+        {"let value = &mut value;", UnaryOp::MutReference},
+    };
+    for (const UnaryCase &test : cases) {
+        auto statement = parse_statement(test.source);
+        const auto *unary = dynamic_cast<const Unary *>(initializer(statement));
+        if (!unary || unary->op() != test.expected) {
+            fail("unary operator", test.source);
+        }
+    }
+
+    auto statement = parse_statement("let value = !!ready;");
+    const auto *outer = dynamic_cast<const Unary *>(initializer(statement));
+    const auto *inner =
+        outer ? dynamic_cast<const Unary *>(&outer->operand()) : nullptr;
+    if (!outer || outer->op() != UnaryOp::LogicalNot || !inner ||
+        inner->op() != UnaryOp::LogicalNot) {
+        fail("right associative unary", "nested logical not was not preserved");
+    }
+
+    statement = parse_statement("let value = &mut values[index];");
+    const auto *reference = dynamic_cast<const Unary *>(initializer(statement));
+    if (!reference || reference->op() != UnaryOp::MutReference ||
+        !dynamic_cast<const IndexExpr *>(&reference->operand())) {
+        fail("mutable reference", "mutable indexed reference was not preserved");
+    }
+}
+
+void test_literals_casts_and_grouping() {
+    auto statement = parse_statement("let value = 0b1010;");
+    const auto *literal = dynamic_cast<const Literal *>(initializer(statement));
+    if (!literal || literal->kind() != LiteralKind::Integer ||
+        std::get<std::uint64_t>(literal->value()) != 10) {
+        fail("binary integer", "binary integer value was not decoded");
+    }
+
+    statement = parse_statement("let value = true;");
+    literal = dynamic_cast<const Literal *>(initializer(statement));
+    if (!literal || literal->kind() != LiteralKind::Boolean ||
+        !std::get<bool>(literal->value())) {
+        fail("boolean literal", "boolean value was not preserved");
+    }
+
+    statement = parse_statement("let value = 'A';");
+    literal = dynamic_cast<const Literal *>(initializer(statement));
+    if (!literal || literal->kind() != LiteralKind::Char ||
+        std::get<char>(literal->value()) != 'A') {
+        fail("character literal", "character value was not preserved");
+    }
+
+    statement = parse_statement(R"(let value = "hello";)");
+    literal = dynamic_cast<const Literal *>(initializer(statement));
+    if (!literal || literal->kind() != LiteralKind::String ||
+        std::get<std::string>(literal->value()) != "hello") {
+        fail("string literal", "string value was not decoded");
+    }
+
+    statement = parse_statement("let value = i32((count));");
+    const auto *cast = dynamic_cast<const CastExpr *>(initializer(statement));
+    if (!cast || cast->target_type() != PrimitiveTypeKind::i32 ||
+        !dynamic_cast<const Grp *>(&cast->operand())) {
+        fail("cast and grouping", "cast or grouped operand was not preserved");
+    }
+}
+
+void test_repeat_array_dimensions() {
+    auto statement = parse_statement("let values = [0; 2 + 2, 8];");
+    const auto *repeat =
+        dynamic_cast<const RepeatArrayExpr *>(initializer(statement));
+    if (!repeat || repeat->dimensions().size() != 2 ||
+        !dynamic_cast<const BinaryExpr *>(repeat->dimensions()[0].get())) {
+        fail("repeat array dimensions",
+             "compound repeat-array dimensions were not preserved");
+    }
+}
+
+void test_malformed_expressions() {
+    expect_parser_error("missing unary operand", "let value = -;");
+    expect_parser_error("missing call argument", "let value = add(;");
+    expect_parser_error("empty index", "let value = values[];");
+    expect_parser_error("unterminated group", "let value = (1 + 2;");
+    expect_parser_error("missing range endpoint", "let value = 0..;");
+    expect_parser_error(
+        "oversized integer",
+        "let value = 999999999999999999999999999999999999999999;");
+    expect_parser_error("oversized float", "let value = 1.0e999999;");
+    expect_parser_error("empty cast", "let value = i32();");
+    expect_parser_error("empty array", "let value = [];");
 }
 
 void test_ranges() {
@@ -194,10 +297,14 @@ void test_non_chaining_and_trailing_commas() {
 int main() {
     test_binary_precedence();
     test_binary_operators_and_associativity();
+    test_unary_expressions();
     test_postfix_chaining();
+    test_literals_casts_and_grouping();
     test_ranges();
+    test_repeat_array_dimensions();
     test_array_and_struct_edges();
     test_non_chaining_and_trailing_commas();
+    test_malformed_expressions();
     if (failures != 0) {
         std::cerr << failures << " expression parser test(s) failed\n";
         return EXIT_FAILURE;

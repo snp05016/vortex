@@ -10,6 +10,9 @@ bool is_assignment_operator(TokenKind kind) {
            kind == TokenKind::OP_MODULO_ASSIGN;
 }
 
+/// checks if an expression is a valid target for an assignment.
+/// for `values[index]`, it checks if the index expression is a valid assignment target.
+/// for `object.field`, it checks if the object expression is a valid assignment target.
 bool is_assignment_target(const Expr &expression) {
     if (dynamic_cast<const Identifier *>(&expression)) {
         return true;

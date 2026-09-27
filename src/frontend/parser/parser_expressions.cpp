@@ -8,7 +8,7 @@ namespace {
 inline std::string decode_string_literal(const Token &token) {
     const std::string text = token.current_token_string();
     std::string value;
-    value.reserve(text.size() - 2);
+    value.reserve(text.size() - 2); // reserve will reserve space for the string without quotes
 
     for (std::size_t index = 1; index + 1 < text.size(); ++index) {
         if (text[index] != '\\') {
@@ -108,6 +108,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
     while (true) {
         Token suffix = peek();
         if (suffix.kind == TokenKind::PUNC_LPAREN) {
+            SourceLocation expression_location = expression->location();
             advance();
             std::vector<std::unique_ptr<Expr>> arguments;
             if (!check(TokenKind::PUNC_RPAREN)) {
@@ -124,10 +125,12 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             }
             expect(TokenKind::PUNC_RPAREN, "')'");
             expression = std::make_unique<CallCastExpr>(
-                suffix.location, std::move(expression), std::move(arguments));
+                expression_location, std::move(expression),
+                std::move(arguments));
             continue;
         }
         if (suffix.kind == TokenKind::PUNC_LBRACKET) {
+            SourceLocation expression_location = expression->location();
             advance();
             if (check(TokenKind::PUNC_RBRACKET)) {
                 parser_errors::expected(peek().location, "index expression");
@@ -145,10 +148,11 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             }
             expect(TokenKind::PUNC_RBRACKET, "']'");
             expression = std::make_unique<IndexExpr>(
-                suffix.location, std::move(expression), std::move(indices));
+                expression_location, std::move(expression), std::move(indices));
             continue;
         }
         if (suffix.kind == TokenKind::PUNC_DOT) {
+            SourceLocation expression_location = expression->location();
             advance();
             Token field = peek();
             if (field.kind != TokenKind::IDENTIFIER) {
@@ -157,7 +161,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             }
             advance();
             expression = std::make_unique<FieldAccessExpr>(
-                suffix.location, std::move(expression),
+                expression_location, std::move(expression),
                 field.current_token_string());
             continue;
         }
@@ -215,17 +219,26 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (tok.kind == TokenKind::LIT_INT) {
         advance(); // consume the integer literal.
         const std::string text = tok.current_token_string();
-        const bool is_binary =
-            text.rfind("0b", 0) == 0 || text.rfind("0B", 0) == 0;
-        const std::uint64_t value =
-            is_binary ? std::stoull(text.substr(2), nullptr, 2)
-                      : std::stoull(text, nullptr, 10);
+        const bool is_binary = text.rfind("0b", 0) == 0;
+        std::uint64_t value;
+        try {
+            value = is_binary ? std::stoull(text.substr(2), nullptr, 2)
+                              : std::stoull(text, nullptr, 10);
+        } catch (const std::exception &) {
+            parser_errors::invalid(tok.location, "integer literal");
+        }
         return std::make_unique<Literal>(tok.location, LiteralKind::Integer,
                                          value);
     } else if (tok.kind == TokenKind::LIT_FLOAT) {
         advance();
+        double value;
+        try {
+            value = std::stod(tok.current_token_string());
+        } catch (const std::exception &) {
+            parser_errors::invalid(tok.location, "floating-point literal");
+        }
         return std::make_unique<Literal>(tok.location, LiteralKind::Float,
-                                         std::stod(tok.current_token_string()));
+                                         value);
     } else if (tok.kind == TokenKind::LIT_STRING) {
         advance();
         return std::make_unique<Literal>(tok.location, LiteralKind::String,

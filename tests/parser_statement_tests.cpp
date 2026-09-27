@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 int failures = 0;
@@ -28,16 +29,31 @@ void expect_parser_error(std::string_view test_name, std::string source) {
 }
 
 void test_assignment_dispatch() {
-    auto statement = parse_statement("count += 1;");
-    const auto *assignment =
-        dynamic_cast<const AssignmentStatement *>(statement.get());
-    if (!assignment || assignment->op() != AssignmentOperation::AddAssign ||
-        !dynamic_cast<const Identifier *>(&assignment->lhs())) {
-        fail("assignment dispatch", "simple assignment was not preserved");
+    struct AssignmentCase {
+        std::string source;
+        AssignmentOperation expected;
+    };
+    const std::vector<AssignmentCase> cases = {
+        {"count = 1;", AssignmentOperation::Assign},
+        {"count += 1;", AssignmentOperation::AddAssign},
+        {"count -= 1;", AssignmentOperation::SubtractAssign},
+        {"count *= 2;", AssignmentOperation::MultiplyAssign},
+        {"count /= 2;", AssignmentOperation::DivideAssign},
+        {"count %= 2;", AssignmentOperation::RemainderAssign},
+    };
+    for (const AssignmentCase &test : cases) {
+        auto statement = parse_statement(test.source);
+        const auto *assignment =
+            dynamic_cast<const AssignmentStatement *>(statement.get());
+        if (!assignment || assignment->op() != test.expected ||
+            !dynamic_cast<const Identifier *>(&assignment->lhs())) {
+            fail("assignment operator", test.source);
+        }
     }
 
-    statement = parse_statement("points[index].x = 0.0;");
-    assignment = dynamic_cast<const AssignmentStatement *>(statement.get());
+    auto statement = parse_statement("points[index].x = 0.0;");
+    const auto *assignment =
+        dynamic_cast<const AssignmentStatement *>(statement.get());
     const auto *field =
         assignment
             ? dynamic_cast<const FieldAccessExpr *>(&assignment->lhs())
@@ -47,6 +63,17 @@ void test_assignment_dispatch() {
     if (!field || field->field_name() != "x" || !index) {
         fail("assignment target chain",
              "indexed field target was not preserved");
+    }
+
+    statement = parse_statement("matrix[row, column] *= scale;");
+    assignment = dynamic_cast<const AssignmentStatement *>(statement.get());
+    index = assignment
+                ? dynamic_cast<const IndexExpr *>(&assignment->lhs())
+                : nullptr;
+    if (!index || index->indices().size() != 2 ||
+        assignment->op() != AssignmentOperation::MultiplyAssign) {
+        fail("multidimensional assignment target",
+             "indices or compound operator were not preserved");
     }
 }
 
@@ -100,6 +127,19 @@ void test_for_statement() {
 void test_required_loop_blocks() {
     expect_parser_error("unbraced while", "while ready break;");
     expect_parser_error("unbraced for", "for index in 0..10 continue;");
+}
+
+void test_invalid_statements() {
+    expect_parser_error("missing variable initializer", "let value;");
+    expect_parser_error("misplaced mut", "let value mut = 1;");
+    expect_parser_error("missing expression semicolon", "run()");
+    expect_parser_error("binary assignment target", "(left + right) = 4;");
+    expect_parser_error("call assignment target", "function() = 4;");
+    expect_parser_error("missing return semicolon", "return value");
+    expect_parser_error("unbraced if", "if ready run();");
+    expect_parser_error("unbraced else", "if ready {} else run();");
+    expect_parser_error("break with value", "break value;");
+    expect_parser_error("continue with value", "continue 2;");
 }
 
 void test_if_without_else() {
@@ -177,6 +217,7 @@ int main() {
     test_while_statement();
     test_for_statement();
     test_required_loop_blocks();
+    test_invalid_statements();
     if (failures != 0) {
         std::cerr << failures << " statement parser test(s) failed\n";
         return EXIT_FAILURE;
