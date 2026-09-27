@@ -75,7 +75,7 @@ class Parser {
     /// callers provide the human-readable spelling used in the diagnostic.
     void expect(TokenKind kind, std::string_view expected_value) {
         if (!match(kind)) {
-            parser_errors::expected(peek().location, expected_value);
+            ParserError::expected(peek().location, expected_value);
         }
     }
 };

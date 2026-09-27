@@ -40,7 +40,7 @@ inline std::string decode_string_literal(const Token &token) {
             value += '"';
             break;
         default:
-            parser_errors::invalid(token.location, "escape sequence");
+            ParserError::invalid(token.location, "escape sequence");
         }
     }
 
@@ -118,7 +118,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
                         break;
                     }
                     if (check(TokenKind::PUNC_RPAREN)) {
-                        parser_errors::invalid(
+                        ParserError::invalid(
                             peek().location, "trailing comma in function call");
                     }
                 }
@@ -133,7 +133,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             SourceLocation expression_location = expression->location();
             advance();
             if (check(TokenKind::PUNC_RBRACKET)) {
-                parser_errors::expected(peek().location, "index expression");
+                ParserError::expected(peek().location, "index expression");
             }
             std::vector<std::unique_ptr<Expr>> indices;
             while (true) {
@@ -142,7 +142,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
                     break;
                 }
                 if (check(TokenKind::PUNC_RBRACKET)) {
-                    parser_errors::invalid(
+                    ParserError::invalid(
                         peek().location, "trailing comma in index expression");
                 }
             }
@@ -156,7 +156,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             advance();
             Token field = peek();
             if (field.kind != TokenKind::IDENTIFIER) {
-                parser_errors::expected(field.location, "field name",
+                ParserError::expected(field.location, "field name",
                                         "after '.'");
             }
             advance();
@@ -208,7 +208,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
         auto operand = parse_expression();
         if (!operand) {
-            parser_errors::expected(peek().location, "expression", "in cast");
+            ParserError::expected(peek().location, "expression", "in cast");
         }
 
         expect(TokenKind::PUNC_RPAREN, "')'");
@@ -225,7 +225,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
             value = is_binary ? std::stoull(text.substr(2), nullptr, 2)
                               : std::stoull(text, nullptr, 10);
         } catch (const std::exception &) {
-            parser_errors::invalid(tok.location, "integer literal");
+            ParserError::invalid(tok.location, "integer literal");
         }
         return std::make_unique<Literal>(tok.location, LiteralKind::Integer,
                                          value);
@@ -235,7 +235,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         try {
             value = std::stod(tok.current_token_string());
         } catch (const std::exception &) {
-            parser_errors::invalid(tok.location, "floating-point literal");
+            ParserError::invalid(tok.location, "floating-point literal");
         }
         return std::make_unique<Literal>(tok.location, LiteralKind::Float,
                                          value);
@@ -247,7 +247,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         advance();
         const std::string value = decode_string_literal(tok);
         if (value.size() != 1) {
-            parser_errors::invalid(tok.location, "character literal");
+            ParserError::invalid(tok.location, "character literal");
         }
         return std::make_unique<Literal>(tok.location, LiteralKind::Char,
                                          value[0]);
@@ -266,13 +266,13 @@ std::unique_ptr<Expr> Parser::parse_primary() {
             std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields;
 
             if (check(TokenKind::PUNC_RBRACE)) {
-                parser_errors::invalid(peek().location,
+                ParserError::invalid(peek().location,
                                        "struct expression with zero fields");
             }
             while (true) {
                 Token field = peek();
                 if (field.kind != TokenKind::IDENTIFIER) {
-                    parser_errors::expected(field.location,
+                    ParserError::expected(field.location,
                                             "struct field name");
                 }
 
@@ -300,7 +300,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
         auto expr = parse_expression();
         if (!expr) {
-            parser_errors::expected(peek().location, "expression", "after '('");
+            ParserError::expected(peek().location, "expression", "after '('");
         }
 
         expect(TokenKind::PUNC_RPAREN, "')'");
@@ -308,26 +308,26 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     } else if (tok.kind == TokenKind::PUNC_LBRACKET) {
         advance();
         if (check(TokenKind::PUNC_RBRACKET)) {
-            parser_errors::invalid(tok.location, "empty array expression");
+            ParserError::invalid(tok.location, "empty array expression");
         }
 
         auto first = parse_expression();
         if (!first) {
-            parser_errors::expected(peek().location, "array element");
+            ParserError::expected(peek().location, "array element");
         }
 
         if (match(TokenKind::PUNC_SEMICOLON)) {
             std::vector<std::unique_ptr<Expr>> dimensions;
             auto dimension = parse_expression();
             if (!dimension) {
-                parser_errors::expected(peek().location, "array dimension");
+                ParserError::expected(peek().location, "array dimension");
             }
 
             dimensions.push_back(std::move(dimension));
             while (match(TokenKind::PUNC_COMMA)) {
                 auto next_dimension = parse_expression();
                 if (!next_dimension) {
-                    parser_errors::expected(peek().location, "array dimension");
+                    ParserError::expected(peek().location, "array dimension");
                 }
 
                 dimensions.push_back(std::move(next_dimension));
@@ -352,6 +352,6 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         return std::make_unique<ArrayExpr>(tok.location, std::move(elements));
     } else {
         // rejects tokens that cannot begin a primary expression.
-        parser_errors::unexpected(tok.location, "token in primary expression");
+        ParserError::unexpected(tok.location, "token in primary expression");
     }
 }

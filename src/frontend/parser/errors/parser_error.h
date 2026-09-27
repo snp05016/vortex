@@ -35,45 +35,43 @@ class ParserError : public std::runtime_error {
         return location_;
     }
 
+    /// raises an error for syntax that requires a missing token or construct.
+    /// for `let value 1;`, it reports that `=` was expected.
+    /// optional context is appended to keep the final message natural.
+    [[noreturn]] static void expected(SourceLocation location,
+                                      std::string_view expected_value,
+                                      std::string_view context = {}) {
+        std::string message = "expected ";
+        message += expected_value;
+        if (!context.empty()) {
+            message += " ";
+            message += context;
+        }
+        throw ParserError(ParserErrorKind::Expected, location, std::move(message));
+    }
+
+    /// raises an error when the current token cannot begin the requested syntax.
+    /// for `let value = );`, it reports an unexpected token in the expression.
+    /// this function never returns, so parsing stops at the reported location.
+    [[noreturn]] static void unexpected(SourceLocation location,
+                                        std::string_view value) {
+        std::string message = "unexpected ";
+        message += value;
+        throw ParserError(ParserErrorKind::Unexpected, location,
+                          std::move(message));
+    }
+
+    /// raises an error for syntax that has the right pieces in a forbidden form.
+    /// for `left < middle < right`, it reports an invalid comparison chain.
+    /// this function never returns and preserves the location of the invalid form.
+    [[noreturn]] static void invalid(SourceLocation location,
+                                     std::string_view value) {
+        std::string message = "invalid ";
+        message += value;
+        throw ParserError(ParserErrorKind::Invalid, location, std::move(message));
+    }
+
   private:
     ParserErrorKind kind_;
     SourceLocation location_;
 };
-
-namespace parser_errors {
-/// raises an error for syntax that requires a missing token or construct.
-/// for `let value 1;`, it reports that `=` was expected.
-/// optional context is appended to keep the final message natural.
-[[noreturn]] inline void expected(SourceLocation location,
-                                  std::string_view expected_value,
-                                  std::string_view context = {}) {
-    std::string message = "expected ";
-    message += expected_value;
-    if (!context.empty()) {
-        message += " ";
-        message += context;
-    }
-    throw ParserError(ParserErrorKind::Expected, location, std::move(message));
-}
-
-/// raises an error when the current token cannot begin the requested syntax.
-/// for `let value = );`, it reports an unexpected token in the expression.
-/// this function never returns, so parsing stops at the reported location.
-[[noreturn]] inline void unexpected(SourceLocation location,
-                                    std::string_view value) {
-    std::string message = "unexpected ";
-    message += value;
-    throw ParserError(ParserErrorKind::Unexpected, location,
-                      std::move(message));
-}
-
-/// raises an error for syntax that has the right pieces in a forbidden form.
-/// for `left < middle < right`, it reports an invalid comparison chain.
-/// this function never returns and preserves the location of the invalid form.
-[[noreturn]] inline void invalid(SourceLocation location,
-                                 std::string_view value) {
-    std::string message = "invalid ";
-    message += value;
-    throw ParserError(ParserErrorKind::Invalid, location, std::move(message));
-}
-} // namespace parser_errors

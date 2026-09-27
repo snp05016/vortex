@@ -57,14 +57,14 @@ std::unique_ptr<Type> Parser::check_array_type() {
 
     auto element_type = parse_type();
     if (!element_type) {
-        parser_errors::expected(peek().location, "type", "after '['");
+        ParserError::expected(peek().location, "type", "after '['");
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
-        parser_errors::expected(peek().location, "';'",
+        ParserError::expected(peek().location, "';'",
                                 "after array element type");
     }
     if (check(TokenKind::PUNC_RBRACKET)) {
-        parser_errors::expected(peek().location, "array dimension");
+        ParserError::expected(peek().location, "array dimension");
     }
     std::vector<std::unique_ptr<Expr>> dimensions;
     while (true) {
@@ -74,12 +74,12 @@ std::unique_ptr<Type> Parser::check_array_type() {
             break;
         }
         if (check(TokenKind::PUNC_RBRACKET)) {
-            parser_errors::invalid(peek().location,
+            ParserError::invalid(peek().location,
                                    "trailing comma in array type");
         }
     }
     if (!match(TokenKind::PUNC_RBRACKET)) {
-        parser_errors::expected(peek().location, "']'", "after array type");
+        ParserError::expected(peek().location, "']'", "after array type");
     }
     return std::make_unique<ArrayType>(
         type_token.location, std::move(element_type), std::move(dimensions));

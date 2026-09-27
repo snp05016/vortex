@@ -106,7 +106,7 @@ std::unique_ptr<Expr> Parser::parse_expression() {
     advance();
     auto end = parse_binary_expression(2);
     if (check(TokenKind::PUNC_RANGE) || check(TokenKind::PUNC_INCL_RANGE)) {
-        parser_errors::invalid(peek().location, "chained range expression");
+        ParserError::invalid(peek().location, "chained range expression");
     }
     return std::make_unique<RangeExpr>(
         range_operator.location, std::move(start), std::move(end),
@@ -131,14 +131,14 @@ std::unique_ptr<Expr> Parser::parse_binary_expression(int min_precedence) {
             break;
         }
         if (is_equality_or_comparison(*op) && saw_equality_or_comparison) {
-            parser_errors::invalid(operator_token.location,
+            ParserError::invalid(operator_token.location,
                                    "chained comparison or equality expression");
         }
         advance();
         auto right = parse_binary_expression(precedence->second + 1);
         if (is_equality_or_comparison(*op) &&
             is_unparenthesized_equality_or_comparison(*right)) {
-            parser_errors::invalid(operator_token.location,
+            ParserError::invalid(operator_token.location,
                                    "chained comparison or equality expression");
         }
         if (is_equality_or_comparison(*op)) {

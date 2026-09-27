@@ -101,13 +101,13 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
 std::unique_ptr<Stmt> Parser::parse_var_declaration() {
     Token var_token = peek();
     if (!match(TokenKind::KW_LET)) {
-        parser_errors::expected(var_token.location, "'let'",
+        ParserError::expected(var_token.location, "'let'",
                                 "for variable declaration");
     }
     bool is_mutable = match(TokenKind::KW_MUT);
     Token name_token = peek();
     if (!match(TokenKind::IDENTIFIER)) {
-        parser_errors::expected(name_token.location, "identifier",
+        ParserError::expected(name_token.location, "identifier",
                                 "for variable declaration");
     }
     std::string var_name = name_token.current_token_string();
@@ -115,21 +115,21 @@ std::unique_ptr<Stmt> Parser::parse_var_declaration() {
     if (match(TokenKind::PUNC_COLON)) {
         var_type = parse_type();
         if (!var_type) {
-            parser_errors::expected(peek().location, "type",
+            ParserError::expected(peek().location, "type",
                                     "after ':' in variable declaration");
         }
     }
     if (!match(TokenKind::OP_ASSIGN)) {
-        parser_errors::expected(peek().location, "'='",
+        ParserError::expected(peek().location, "'='",
                                 "in variable declaration");
     }
     auto initializer = parse_expression();
     if (!initializer) {
-        parser_errors::expected(peek().location, "initializer expression",
+        ParserError::expected(peek().location, "initializer expression",
                                 "in variable declaration");
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
-        parser_errors::expected(peek().location, "';'",
+        ParserError::expected(peek().location, "';'",
                                 "after variable declaration");
     }
     return std::make_unique<VarDeclStmt>(
@@ -140,7 +140,7 @@ std::unique_ptr<Stmt> Parser::parse_assignment_statement(){
     Token target_token = peek();
     auto lhs = parse_postfix();
     if (!lhs || !is_assignment_target(*lhs)) {
-        parser_errors::invalid(target_token.location, "assignment target");
+        ParserError::invalid(target_token.location, "assignment target");
     }
     AssignmentOperation op;
     if (match(TokenKind::OP_ASSIGN)) {
@@ -156,16 +156,16 @@ std::unique_ptr<Stmt> Parser::parse_assignment_statement(){
     } else if (match(TokenKind::OP_MODULO_ASSIGN)) {
         op = AssignmentOperation::RemainderAssign;
     } else {
-        parser_errors::expected(peek().location, "assignment operator",
+        ParserError::expected(peek().location, "assignment operator",
                                 "in assignment statement");
     }
     auto rhs = parse_expression();
     if (!rhs) {
-        parser_errors::expected(peek().location, "expression",
+        ParserError::expected(peek().location, "expression",
                                 "for right-hand side of assignment");
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
-        parser_errors::expected(peek().location, "';'",
+        ParserError::expected(peek().location, "';'",
                                 "after assignment statement");
     }
     return std::make_unique<AssignmentStatement>(
@@ -174,7 +174,7 @@ std::unique_ptr<Stmt> Parser::parse_assignment_statement(){
 std::unique_ptr<Stmt> Parser::parse_return_statement(){
     Token return_token = peek();
     if (!match(TokenKind::KW_RETURN)) {
-        parser_errors::expected(return_token.location, "'return'",
+        ParserError::expected(return_token.location, "'return'",
                                 "for return statement");
     }
     if (check(TokenKind::PUNC_SEMICOLON)) {
@@ -183,11 +183,11 @@ std::unique_ptr<Stmt> Parser::parse_return_statement(){
     } else {
         auto return_value = parse_expression();
         if (!return_value) {
-            parser_errors::expected(peek().location, "expression",
+            ParserError::expected(peek().location, "expression",
                                     "for return value");
         }
         if (!match(TokenKind::PUNC_SEMICOLON)) {
-            parser_errors::expected(peek().location, "';'",
+            ParserError::expected(peek().location, "';'",
                                     "after return statement");
         }
         return std::make_unique<RetStmt>(return_token.location,
@@ -198,11 +198,11 @@ std::unique_ptr<Stmt> Parser::parse_expression_statement(){
     Token expression_token = peek();
     auto expr = parse_expression();
     if (!expr) {
-        parser_errors::expected(peek().location, "expression",
+        ParserError::expected(peek().location, "expression",
                                 "for expression statement");
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
-        parser_errors::expected(peek().location, "';'",
+        ParserError::expected(peek().location, "';'",
                                 "after expression statement");
     }
     return std::make_unique<ExprStmt>(expression_token.location,
@@ -211,18 +211,18 @@ std::unique_ptr<Stmt> Parser::parse_expression_statement(){
 std::unique_ptr<Stmt> Parser::parse_block_statement(){
     Token left_brace = peek();
     if (!match(TokenKind::PUNC_LBRACE)) {
-        parser_errors::expected(left_brace.location, "'{'",
+        ParserError::expected(left_brace.location, "'{'",
                                 "for block statement");
     }
     std::vector<std::unique_ptr<Stmt>> statements;
     while (!check(TokenKind::PUNC_RBRACE)) {
         if (check(TokenKind::EOF_TOKEN)) {
-            parser_errors::expected(peek().location, "'}'",
+            ParserError::expected(peek().location, "'}'",
                                     "after block statement");
         }
         auto statement = parse_statement();
         if (!statement) {
-            parser_errors::expected(peek().location, "statement",
+            ParserError::expected(peek().location, "statement",
                                     "in block statement");
         }
         statements.push_back(std::move(statement));
@@ -234,18 +234,18 @@ std::unique_ptr<Stmt> Parser::parse_block_statement(){
 std::unique_ptr<Stmt> Parser::parse_if_statement(){
     Token if_token = peek();
     if (!match(TokenKind::KW_IF)) {
-        parser_errors::expected(if_token.location, "'if'",
+        ParserError::expected(if_token.location, "'if'",
                                 "for if statement");
     }
     auto condition = parse_expression();
     if (!condition) {
-        parser_errors::expected(peek().location, "expression",
+        ParserError::expected(peek().location, "expression",
                                 "for if statement condition");
     }
 
     std::unique_ptr<Stmt> then_branch = parse_block_statement();
     if (!then_branch) {
-        parser_errors::expected(peek().location, "block",
+        ParserError::expected(peek().location, "block",
                                 "for then branch of if statement");
     }
 
@@ -264,18 +264,18 @@ std::unique_ptr<Stmt> Parser::parse_if_statement(){
 std::unique_ptr<Stmt> Parser::parse_while_statement(){
     Token while_token = peek();
     if (!match(TokenKind::KW_WHILE)) {
-        parser_errors::expected(while_token.location, "'while'",
+        ParserError::expected(while_token.location, "'while'",
                                 "for while statement");
     }
     auto condition = parse_expression();
     if (!condition) {
-        parser_errors::expected(peek().location, "expression",
+        ParserError::expected(peek().location, "expression",
                                 "for while statement condition");
     }
 
     std::unique_ptr<Stmt> body = parse_block_statement();
     if (!body) {
-        parser_errors::expected(peek().location, "block",
+        ParserError::expected(peek().location, "block",
                                 "for body of while statement");
     }
 
@@ -285,27 +285,27 @@ std::unique_ptr<Stmt> Parser::parse_while_statement(){
 std::unique_ptr<Stmt> Parser::parse_for_statement(){
     Token for_token = peek();
     if (!match(TokenKind::KW_FOR)) {
-        parser_errors::expected(for_token.location, "'for'",
+        ParserError::expected(for_token.location, "'for'",
                                 "for for statement");
     }
     Token loop_var_token = peek();
     if (!match(TokenKind::IDENTIFIER)) {
-        parser_errors::expected(loop_var_token.location, "identifier",
+        ParserError::expected(loop_var_token.location, "identifier",
                                 "for loop variable in for statement");
     }
     std::string loop_var_name = loop_var_token.current_token_string();
     if (!match(TokenKind::KW_IN)) {
-        parser_errors::expected(peek().location, "'in'",
+        ParserError::expected(peek().location, "'in'",
                                 "for for statement");
     }
     auto iterable = parse_expression();
     if (!iterable) {
-        parser_errors::expected(peek().location, "expression",
+        ParserError::expected(peek().location, "expression",
                                 "for iterable in for statement");
     }
     std::unique_ptr<Stmt> body = parse_block_statement();
     if (!body) {
-        parser_errors::expected(peek().location, "block",
+        ParserError::expected(peek().location, "block",
                                 "for body of for statement");
     }
     return std::make_unique<ForStmt>(for_token.location, std::move(loop_var_name),
@@ -314,11 +314,11 @@ std::unique_ptr<Stmt> Parser::parse_for_statement(){
 std::unique_ptr<Stmt> Parser::parse_break_statement(){
     Token break_token = peek();
     if (!match(TokenKind::KW_BREAK)) {
-        parser_errors::expected(break_token.location, "'break'",
+        ParserError::expected(break_token.location, "'break'",
                                 "for break statement");
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
-        parser_errors::expected(peek().location, "';'",
+        ParserError::expected(peek().location, "';'",
                                 "after break statement");
     }
     return std::make_unique<BreakStmt>(break_token.location);
@@ -326,11 +326,11 @@ std::unique_ptr<Stmt> Parser::parse_break_statement(){
 std::unique_ptr<Stmt> Parser::parse_continue_statement(){
     Token continue_token = peek();
     if (!match(TokenKind::KW_CONTINUE)) {
-        parser_errors::expected(continue_token.location, "'continue'",
+        ParserError::expected(continue_token.location, "'continue'",
                                 "for continue statement");
     }
     if (!match(TokenKind::PUNC_SEMICOLON)) {
-        parser_errors::expected(peek().location, "';'",
+        ParserError::expected(peek().location, "';'",
                                 "after continue statement");
     }
     return std::make_unique<ContinueStmt>(continue_token.location);
