@@ -1,9 +1,9 @@
 site_name: Vortex
 site_description: A small, statically typed language for numerical kernels, its specification, and a guide to building its compiler.
 site_author: Saumya Patel
-site_url: https://snp05016.github.io/vortex_language/
-repo_name: snp05016/vortex_language
-repo_url: https://github.com/snp05016/vortex_language
+site_url: https://snp05016.github.io/vortex/
+repo_name: snp05016/vortex
+repo_url: https://github.com/snp05016/vortex
 edit_uri: edit/main/docs/
 docs_dir: docs
 site_dir: site
