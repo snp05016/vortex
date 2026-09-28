@@ -8,6 +8,7 @@ random.
 
 | If you want to... | Start here |
 | --- | --- |
+| See every documentation page in order | [Complete documentation index](documentation-index.md) |
 | Learn Vortex from the beginning | [Language tour](language-tour/README.md) |
 | Look up one term or AST concept quickly | [Language and compiler cheat sheet](language-and-compiler-cheatsheet.md) |
 | Check whether exact syntax is valid | [Formal v0.1 grammar](specification/grammar.md) |

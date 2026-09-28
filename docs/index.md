@@ -49,6 +49,9 @@ This program shows most of what a Vortex file contains:
 Two paths through this site: one for learning the language and its
 compiler, one for evaluating the project.
 
+For one numbered table containing every page in reading order, use the
+[complete documentation index](documentation-index.md).
+
 ### For learners
 
 <div class="document-index">

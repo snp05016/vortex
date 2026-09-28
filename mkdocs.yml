@@ -52,6 +52,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Documentation index: documentation-index.md
   - Learn:
       - Start the tour: language-tour/README.md
       - Your progress: progress.md
