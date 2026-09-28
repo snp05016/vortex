@@ -1,4 +1,4 @@
-Tokenizing /Users/saumya/vortex/tests/sample.vx
+Tokenizing /Users/saumya/vortex/tests/vx/samples/sample.vx
 
 Token kind: fn, Location: 30-32
 Token kind: main, Location: 33-37

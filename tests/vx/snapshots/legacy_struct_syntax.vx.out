@@ -1,4 +1,4 @@
-Tokenizing /Users/saumya/vortex/tests/struct.vx
+Tokenizing /Users/saumya/vortex/tests/vx/invalid/legacy_struct_syntax.vx
 
 Token kind: struct, Location: 2-8
 Token kind: {, Location: 8-9

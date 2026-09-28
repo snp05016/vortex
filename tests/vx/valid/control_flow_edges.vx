@@ -1,0 +1,22 @@
+fn control(limit: i32) -> i32 {
+    let mut total: i32 = 0;
+    if limit == 0 {
+        return 0;
+    } else if limit < 0 {
+        return -1;
+    } else {
+        for index in 0..=limit {
+            if index == 2 {
+                continue;
+            }
+            total += index;
+        }
+    }
+    while total > 100 {
+        total -= 1;
+        if total == 101 {
+            break;
+        }
+    }
+    return total;
+}

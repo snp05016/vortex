@@ -19,6 +19,11 @@ std::unique_ptr<Decl> parse_declaration(const std::string &source) {
     return parser.parse_declaration();
 }
 
+std::unique_ptr<Program> parse_program(const std::string &source) {
+    Parser parser(source.data(), source.size());
+    return parser.parse();
+}
+
 void expect_parser_error(std::string_view test_name,
                          const std::string &source) {
     try {
@@ -175,6 +180,28 @@ void test_declaration_dispatch() {
     expect_parser_error("invalid top-level declaration", "let value = 1;");
 }
 
+void test_program() {
+    auto const empty = parse_program("");
+    if (!empty || !empty->declarations().empty()) {
+        fail("empty program", "empty source did not produce an empty program");
+    }
+
+    auto const program = parse_program("struct Point { x: f32 } fn main() {}");
+    if (!program || program->declarations().size() != 2 ||
+        !dynamic_cast<const StructDecl *>(program->declarations()[0].get()) ||
+        !dynamic_cast<const FunctionDecl *>(program->declarations()[1].get())) {
+        fail("program declaration order",
+             "top-level declarations were not preserved in source order");
+    }
+
+    try {
+        auto const invalid = parse_program("fn main() {} let value = 1;");
+        (void)invalid;
+        fail("top-level statement", "top-level statement was accepted");
+    } catch (const ParserError &) {
+    }
+}
+
 void test_invalid_functions() {
     struct InvalidCase {
         std::string_view name;
@@ -229,6 +256,7 @@ int main() {
     test_struct_fields();
     test_struct_type_forms();
     test_declaration_dispatch();
+    test_program();
     test_invalid_functions();
     test_invalid_structs();
     if (failures != 0) {

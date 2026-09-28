@@ -1,0 +1,9 @@
+// These forms are syntactically valid. Semantic analysis rejects their types.
+struct Holder {
+    borrowed: &i32,
+}
+
+fn unusual(nothing: void) -> &i32 {
+    let mut forbidden: &i32 = &nothing;
+    return &nothing;
+}

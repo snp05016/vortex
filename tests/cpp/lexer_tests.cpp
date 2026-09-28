@@ -1,7 +1,7 @@
 /*
 these are the tests for the lexer, they are written by LLMs
 */
-#include "frontend/lexer.h"
+#include "frontend/lexer/lexer.h"
 #include <cstdlib>
 #include <initializer_list>
 #include <iostream>

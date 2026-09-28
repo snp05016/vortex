@@ -1,0 +1,3 @@
+fn choose() {
+    if true {} else return;
+}

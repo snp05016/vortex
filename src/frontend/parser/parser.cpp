@@ -1,7 +1,5 @@
 #include "parser.h"
 
-#include <iostream>
-
 namespace {
 
 /// maps a binary operator token to the matching ast operation.
@@ -76,21 +74,15 @@ bool is_unparenthesized_equality_or_comparison(const Expr &expression) {
 Parser::Parser(const char *source, std::size_t length) : lexer(source, length) {
 }
 
-/// reads and prints every token until the source reaches its end.
-/// for `let count = 1;`, it prints the declaration tokens in order.
-/// this is currently a debugging entry point and does not build a program ast.
-void Parser::parse() {
-    while (true) {
-        Token const token = lexer.next_token();
-        if (token.kind == TokenKind::EOF_TOKEN) {
-            break;
-        }
-
-        // statement and expression dispatch will be added here later.
-        std::cout << "Token kind: " << token.current_token_string()
-                  << ", Location: " << token.location.start << "-"
-                  << (token.location.start + token.location.length) << '\n';
+/// parses every top-level declaration and preserves its source order.
+/// for `struct Point {...} fn main() {...}`, the struct comes before the
+/// function in the resulting program.
+std::unique_ptr<Program> Parser::parse() {
+    std::vector<std::unique_ptr<Decl>> declarations;
+    while (!check(TokenKind::EOF_TOKEN)) {
+        declarations.push_back(parse_declaration());
     }
+    return std::make_unique<Program>(std::move(declarations));
 }
 
 /// parses one complete expression, including an optional range.

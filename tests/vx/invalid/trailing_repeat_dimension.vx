@@ -1,0 +1,3 @@
+fn repeat() {
+    let values = [0; 2,];
+}

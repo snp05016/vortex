@@ -1,0 +1,3 @@
+fn call() {
+    print(1,);
+}

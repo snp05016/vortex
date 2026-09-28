@@ -1,0 +1,13 @@
+struct Cell {
+    value: i32,
+}
+
+fn update(cells: &mut [Cell; 2, 2], row: usize, column: usize) {
+    cells[row, column].value = 1;
+    cells[row, column].value += 2;
+    cells[row, column].value -= 3;
+    cells[row, column].value *= 4;
+    cells[row, column].value /= 5;
+    cells[row, column].value %= 6;
+    display(cells[row, column].value);
+}

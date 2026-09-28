@@ -1,5 +1,5 @@
 #pragma once
-#include "../../token.h"
+#include "../../lexer/token.h"
 #include <cstdint>
 #include <stdexcept>
 #include <string>

@@ -1,0 +1,12 @@
+fn expressions(a: i32, b: i32, mask: i32) {
+    let precedence = a + b * 2 << 1 & mask ^ 3 | 4;
+    let logic = !false || true && a < b;
+    let grouped = (a + b) * (a - b);
+    let unary = -+-a;
+    let converted = f64(a + b);
+    let values = [1, 2, 3,];
+    let repeated = [0; 2 + 2, 8 / 2];
+    let borrowed = &values[0];
+    let mutable_borrow = &mut values[1];
+    consume(factory().items[0, 1].value, converted);
+}

@@ -1,6 +1,6 @@
-#include "frontend/debugVisitor.h"
-#include "frontend/lexer.h"
+#include "frontend/debug/ast_debug_printer.h"
 #include "frontend/parser/parser.h"
+#include <array>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -10,12 +10,55 @@
 
 namespace {
 
-int run(int argc, char *const *argv) {
-    if (argc != 2) {
-        std::cerr << "Usage: vortex_debug <source-file>\n";
-        return 1;
+void print_ast(std::string_view title, std::string_view source) {
+    Parser parser(source.data(), source.size());
+    auto const program = parser.parse();
+    std::cout << "=== " << title << " ===\n\n";
+    std::cout << "Source:\n" << source << "\nAST:\n";
+    AstDebugPrinter const printer(std::cout);
+    printer.print(*program);
+    std::cout << '\n';
+}
+
+int run_examples() {
+    struct Example {
+        std::string_view name;
+        std::string_view source;
+    };
+
+    constexpr std::array examples = {
+        Example{"function and expression", "fn main() {\n"
+                                           "    let value: i32 = 2 + 3 * 4;\n"
+                                           "    return;\n"
+                                           "}\n"},
+        Example{"struct and references", "struct Point { x: f32, y: f32, }\n"
+                                         "fn read_x(point: &Point) -> f32 {\n"
+                                         "    return point.x;\n"
+                                         "}\n"},
+        Example{"control flow", "fn count() {\n"
+                                "    let mut total = 0;\n"
+                                "    for index in 0..=3 {\n"
+                                "        if index == 2 { continue; }\n"
+                                "        total += index;\n"
+                                "    }\n"
+                                "    while total < 10 { total += 1; }\n"
+                                "}\n"},
+        Example{"arrays and construction",
+                "struct Point { x: f32, y: f32 }\n"
+                "fn values() {\n"
+                "    let origin = Point { x: 0.0, y: 0.0 };\n"
+                "    let numbers: [i32; 3] = [1, 2, 3];\n"
+                "    let zeros = [0; 2, 2];\n"
+                "    print(origin.x, numbers[0]);\n"
+                "}\n"},
+    };
+    for (const Example &example : examples) {
+        print_ast(example.name, example.source);
     }
-    const std::string path = argv[1];
+    return 0;
+}
+
+int run_file(const std::string &path) {
     std::ifstream input(path, std::ios::binary);
     if (!input) {
         std::cerr << "Could not open: " << path << '\n';
@@ -23,22 +66,19 @@ int run(int argc, char *const *argv) {
     }
     const std::string source{std::istreambuf_iterator<char>(input),
                              std::istreambuf_iterator<char>()};
-    Lexer lexer(source.data(), source.size());
-    std::cout << "Tokenizing " << path << "\n\n";
-    Parser parser(source.data(), source.size());
-    parser.parse();
-    DebugVisitor debugVisitor;
-    std::cout << "\n Debugging tokens:\n";
-    while (true) {
-        const Token token = lexer.next_token();
-        const std::string_view text(source.data() + token.location.start,
-                                    token.location.length);
-        debugVisitor.visit(token);
-        if (token.kind == TokenKind::EOF_TOKEN) {
-            break;
-        }
-    }
+    print_ast("AST for " + path, source);
     return 0;
+}
+
+int run(int argc, char *const *argv) {
+    if (argc == 1) {
+        return run_examples();
+    }
+    if (argc == 2) {
+        return run_file(argv[1]);
+    }
+    std::cerr << "Usage: vortex_debug [source-file]\n";
+    return 1;
 }
 
 } // namespace

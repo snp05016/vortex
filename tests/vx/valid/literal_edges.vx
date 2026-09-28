@@ -1,0 +1,10 @@
+fn literals() {
+    let binary = 0b101010;
+    let integer = 18446744073709551615;
+    let decimal = 12.5;
+    let truth = true;
+    let lie = false;
+    let newline = '\n';
+    let quote = '\'';
+    let message = "line one\nline two\t\"quoted\"";
+}

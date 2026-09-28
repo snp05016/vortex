@@ -1,0 +1,16 @@
+struct Matrix {
+    values: [f32; 2 + 2, 8 / 2],
+}
+
+struct Job {
+    input: Matrix,
+    count: usize,
+}
+
+fn transform(input: &Matrix, output: &mut Matrix, count: usize) -> void {
+    return;
+}
+
+fn make_job(matrix: Matrix) -> Job {
+    return Job { input: matrix, count: 4 };
+}

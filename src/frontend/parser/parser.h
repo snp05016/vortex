@@ -1,7 +1,7 @@
 #pragma once // this is use to prevent inclusion of the same header file
-#include "../ast.h"
-#include "../lexer.h"
-#include "../token.h"
+#include "../ast/ast.h"
+#include "../lexer/lexer.h"
+#include "../lexer/token.h"
 #include "errors/parser_error.h"
 #include <cstddef>
 #include <deque>
@@ -11,7 +11,8 @@
 class Parser {
   public:
     Parser(const char *source, std::size_t length);
-    void parse();
+    [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Program>
+    parse();
     [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Expr>
     parse_expression();
     [[nodiscard("you prolly meant to use it")]] std::unique_ptr<Expr>

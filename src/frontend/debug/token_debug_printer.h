@@ -1,5 +1,5 @@
 #pragma once
-#include "token.h"
+#include "../lexer/token.h"
 #include <iostream>
 
 inline const char *token_kind_name(TokenKind kind) {
@@ -150,7 +150,7 @@ inline const char *token_kind_name(TokenKind kind) {
     return "UNKNOWN_TOKEN";
 }
 
-class DebugVisitor {
+class TokenDebugPrinter {
   public:
     void visit(const Token &token) {
         std::cout << token_kind_name(token.kind) << ", Location: ["

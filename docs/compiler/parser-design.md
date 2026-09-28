@@ -9,7 +9,7 @@ The source syntax is defined by the
 [document authority](../specification/conformance.md#11-document-authority)
 says which page decides when two disagree. This page is informative. The C++
 node shapes of the actual compiler are those in
-[`ast.h`](https://github.com/snp05016/vortex_language/blob/main/src/frontend/ast.h).
+[`ast.h`](https://github.com/snp05016/vortex_language/blob/main/src/frontend/ast/ast.h).
 
 > **Implementation status:** `parser.cpp` is currently a scaffold. The designs
 > and function shapes below describe one implementation strategy, not the
