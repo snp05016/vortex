@@ -1,4 +1,5 @@
 #include "frontend/debug/ast_debug_printer.h"
+#include "frontend/diagnostics/diagnostic_listener.h"
 #include "frontend/parser/parser.h"
 #include <array>
 #include <exception>
@@ -10,14 +11,23 @@
 
 namespace {
 
-void print_ast(std::string_view title, std::string_view source) {
-    Parser parser(source.data(), source.size());
-    auto const program = parser.parse();
-    std::cout << "=== " << title << " ===\n\n";
-    std::cout << "Source:\n" << source << "\nAST:\n";
-    AstDebugPrinter const printer(std::cout);
-    printer.print(*program);
-    std::cout << '\n';
+bool print_ast(std::string_view title, std::string_view file_name,
+               std::string_view source) {
+    try {
+        Parser parser(source.data(), source.size());
+        auto const program = parser.parse();
+        std::cout << "=== " << title << " ===\n\n";
+        std::cout << "Source:\n" << source << "\nAST:\n";
+        AstDebugPrinter const printer(std::cout);
+        printer.print(*program);
+        std::cout << '\n';
+        return true;
+    } catch (const ParserError &error) {
+        TextDiagnosticListener listener(std::cerr, file_name, source);
+        listener.report(
+            {DiagnosticSeverity::Error, error.location(), error.what()});
+        return false;
+    }
 }
 
 int run_examples() {
@@ -52,10 +62,14 @@ int run_examples() {
                 "    print(origin.x, numbers[0]);\n"
                 "}\n"},
     };
+    bool all_valid = true;
     for (const Example &example : examples) {
-        print_ast(example.name, example.source);
+        const std::string file_name =
+            "<example:" + std::string(example.name) + ">";
+        all_valid =
+            print_ast(example.name, file_name, example.source) && all_valid;
     }
-    return 0;
+    return all_valid ? 0 : 1;
 }
 
 int run_file(const std::string &path) {
@@ -66,8 +80,7 @@ int run_file(const std::string &path) {
     }
     const std::string source{std::istreambuf_iterator<char>(input),
                              std::istreambuf_iterator<char>()};
-    print_ast("AST for " + path, source);
-    return 0;
+    return print_ast("AST for " + path, path, source) ? 0 : 1;
 }
 
 int run(int argc, char *const *argv) {

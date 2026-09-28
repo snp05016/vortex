@@ -7,6 +7,7 @@ enable_testing()
 
 add_library(vortex_compiler
     src/frontend/debug/ast_debug_printer.cpp
+    src/frontend/diagnostics/diagnostic_listener.cpp
     src/frontend/lexer/lexer.cpp
     src/frontend/parser/parser.cpp
     src/frontend/parser/parser_expressions.cpp
@@ -89,6 +90,15 @@ target_compile_definitions(vortex_vx_fixture_tests PRIVATE
 )
 
 add_test(NAME vx_fixture_tests COMMAND vortex_vx_fixture_tests)
+
+add_executable(vortex_diagnostic_listener_tests
+    tests/cpp/diagnostic_listener_tests.cpp
+)
+
+target_link_libraries(vortex_diagnostic_listener_tests PRIVATE vortex_compiler)
+target_compile_options(vortex_diagnostic_listener_tests PRIVATE -std=c++26)
+
+add_test(NAME diagnostic_listener_tests COMMAND vortex_diagnostic_listener_tests)
 
 add_custom_target(format
     COMMAND "${CMAKE_SOURCE_DIR}/scripts/format.sh"

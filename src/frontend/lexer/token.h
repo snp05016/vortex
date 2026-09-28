@@ -90,6 +90,13 @@ enum class TokenKind { // Using an enum because the token kinds are fixed.
 struct SourceLocation {
     std::size_t start;
     std::size_t length;
+
+    /// describes the stored byte span. line and column require source text and
+    /// are calculated by a diagnostic listener.
+    [[nodiscard]] std::string to_string() const {
+        return "Offset: " + std::to_string(start) +
+               ", Length: " + std::to_string(length);
+    }
 };
 
 // repreesnts a token in the source code with its kind and its location
