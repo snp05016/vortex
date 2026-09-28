@@ -173,9 +173,10 @@ block:
 // `temporary` cannot be used here.
 ```
 
-Name resolution opens a scope at `{` and closes it at `}`. A block cannot
-declare a name that is already visible from outside it: Vortex has no
-shadowing ([decision record](../decisions/names.md#d2)). A block may contain
+Name resolution opens a scope at `{` and closes it at `}`. A block may declare
+a name that an outer local already uses; inside the block the new declaration
+shadows the outer one, and after `}` the outer one is visible again
+([decision record](../decisions/names.md#d57)). A block may contain
 zero or more statements. Vortex v0.1 does not use a block itself as a value.
 
 ## If and else statements
@@ -278,8 +279,9 @@ normally.
     `count` inside the body has no effect on how many iterations remain.
 
 The loop variable is introduced by the loop and is visible only inside its
-body. Its name must not match a name that is already visible, so nested loops
-need different variable names, such as `row`, `column` and `k`. The expression
+body. Its name may shadow an outer local or loop variable, so a nested loop
+may reuse the outer loop's name, though distinct names such as `row`,
+`column` and `k` are usually clearer. The expression
 after `in` must be a range. Vortex v0.1 cannot loop over an array directly, and
 a range cannot be stored in a variable or used anywhere outside a `for` loop
 ([decision 36](../decisions/statements.md#d36)).
@@ -448,9 +450,10 @@ Answers:
     - **Where can a call to a `void` function appear?** Only as the whole
       expression of an expression statement, optionally in parentheses;
       never stored, passed as an argument, or returned.
-    - **Can two nested `for` loops reuse the same loop-variable name?** No.
-      Vortex has no shadowing, so nested loops need distinct names, such as
-      `row` and `column`.
+    - **Can two nested `for` loops reuse the same loop-variable name?** Yes.
+      The inner loop's variable shadows the outer one inside the inner body,
+      so the outer value cannot be read there; distinct names such as `row`
+      and `column` avoid that.
 
 ## Where this comes back
 

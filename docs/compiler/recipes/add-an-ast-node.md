@@ -100,8 +100,8 @@
 
 6. **Handle it in name resolution, if it introduces or uses a name.**
    If the node declares a name, add it to the current scope the way the
-   existing declarations are added, and reject a name that is already visible
-   there, since Vortex has no shadowing
+   existing declarations are added. Reject a duplicate in the same scope or a
+   top-level name; a name from an enclosing local scope may be shadowed
    ([stage 4: naming decisions](../guide/stage-4-names-and-scopes.md#decisions-vortex-has-not-made-yet)).
    If it is a top-level declaration, make sure it is recorded before any use is
    resolved, so a forward reference to it still works

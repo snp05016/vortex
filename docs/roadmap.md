@@ -123,13 +123,13 @@ every v0.1 language construct.
 
 - Build a symbol table for functions, variables, parameters, and struct fields.
 - Reject unknown names.
-- Reject duplicate names in the same scope, and any declaration that reuses a
-  visible name, since Vortex has no shadowing
-  ([decision record](decisions/names.md#d2)).
+- Reject duplicate names in the same scope, and any local that takes a
+  top-level name or `print`; allow an inner block to shadow an outer local
+  ([decision record](decisions/names.md#d57)).
 - Keep variables inside the blocks where they were declared.
 - Validate that the program has exactly one valid `main` function.
-- Add tests for shadowing, duplicate names, and out-of-scope variables; each
-  expects a name error.
+- Add tests for shadowing (accepted, uses link to the nearest declaration),
+  duplicate names, and out-of-scope variables (each a name error).
 
 This milestone is complete when every name in a program resolves to one known
 declaration.

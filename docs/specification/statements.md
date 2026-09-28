@@ -47,9 +47,11 @@ have that type. Without a written type, the variable takes the initializer's
 type ([decision record](../decisions/numbers.md#d31)).
 
 <a class="vx-rule" id="stmt.let.name-visibility" href="#stmt.let.name-visibility">stmt.let.name-visibility</a> The new name becomes visible only after the whole declaration, so its own
-initializer cannot refer to it, and it must not reuse a name that is already
-visible ([Scopes](declarations.md#36-scopes);
-[decision 2](../decisions/names.md#d2)).
+initializer cannot refer to it: a name in the initializer refers to whatever
+was visible before the declaration. The name must be distinct from the other
+names in its scope; in a nested block it may shadow an outer local, parameter
+or loop variable ([Scopes](declarations.md#36-scopes);
+[decision 57](../decisions/names.md#d57)).
 
 ## 6.4 Assignment
 
@@ -207,9 +209,11 @@ follows:
 [decision 13](../decisions/statements.md#d13).
 
 <a class="vx-rule" id="stmt.for.variable-scope" href="#stmt.for.variable-scope">stmt.for.variable-scope</a> The loop variable is visible only in the body. It belongs to the scope of the
-body block, so it must not reuse a visible name, and a local declared directly
-in the body must not reuse it. Nested loops therefore need different variable
-names. C-style `for` syntax and multiple loop bindings are not accepted.
+body block, which is a nested scope, so it may shadow an outer local,
+parameter or loop variable, and a local declared directly in the body must not
+reuse it. A nested loop may therefore reuse the outer loop's variable name; the
+inner name hides the outer one inside the inner body. C-style `for` syntax and
+multiple loop bindings are not accepted.
 
 ## 6.9 Break and continue
 
@@ -271,12 +275,12 @@ fn sign(value: i32) -> i32 {
 
 ## 6.11 Scope and lifetime
 
-<a class="vx-rule" id="stmt.scope.no-shadowing" href="#stmt.scope.no-shadowing">stmt.scope.no-shadowing</a> A local variable exists from its declaration until execution leaves its block.
+<a id="stmt.scope.no-shadowing"></a><a class="vx-rule" id="stmt.scope.block-shadowing" href="#stmt.scope.block-shadowing">stmt.scope.block-shadowing</a> A local variable exists from its declaration until execution leaves its block.
 An inner block can read visible outer declarations. A name declared inside the
-inner block is not visible after that block ends. An inner block must not
-declare a name that is visible from an outer scope, because Vortex has no
-shadowing: a declaration never hides a visible name
-([decision record](../decisions/names.md#d2)).
+inner block is not visible after that block ends. An inner block may declare a
+name that is visible from an outer local scope; the inner declaration shadows
+the outer one until the inner block ends, and the outer variable keeps its
+value and storage throughout ([decision record](../decisions/names.md#d57)).
 
 <a class="vx-rule" id="stmt.scope.reference-lifetime" href="#stmt.scope.reference-lifetime">stmt.scope.reference-lifetime</a> The lifetime of a value and the visibility of its name are related but
 distinct compiler concepts. A reference cannot outlive the storage it refers

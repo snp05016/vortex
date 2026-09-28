@@ -1,6 +1,6 @@
 # Names and scopes
 
-These records settle three rules about names: whether a declaration may reuse
+These records settle the rules about names: whether a declaration may reuse
 a name that is already visible, whether a top-level function or struct can be
 used above its declaration, and whether structs and functions share one set of
 names. The [Programs and declarations](../specification/declarations.md#36-scopes)
@@ -9,8 +9,9 @@ chosen and what it changed.
 
 ## 2. No shadowing {#d2}
 
-**Status:** Accepted, 2026-09-23. **Applies to:** v0.1. **Resolves:** none.
-**Guide stage:** 4.
+**Status:** Superseded by [record 57](#d57) on 2026-09-27, which allows
+shadowing in inner blocks. Accepted, 2026-09-23. **Applies to:** v0.1.
+**Resolves:** none. **Guide stage:** 4.
 
 **Question.** May a declaration reuse a name already visible where it appears?
 That is **shadowing**: the new declaration would hide the old one.
@@ -186,6 +187,63 @@ Guide stage 4 reports the clash at the later declaration, with an optional
 note at the earlier one. By [record 2](#d2), a parameter or local cannot reuse
 a struct name either. Pages changed: the declarations, grammar and structs
 chapters, both glossaries, tour chapters 5 and 10, guide stage 4 and the cheat
+sheet.
+
+## 57. Shadowing in inner blocks {#d57}
+
+**Status:** Accepted, 2026-09-27. **Applies to:** v0.1. **Supersedes:**
+[record 2](#d2). **Guide stage:** 4 and 7.
+
+**Question.** Record 2 forbade all shadowing. Should an inner block be able to
+reuse the name of an outer local instead?
+
+**Before this decision.** [Record 2](#d2) made any declaration that reused a
+visible name a name error, so nested loops needed distinct variable names and
+`let total = total + 1;` never compiled.
+
+**Options.** The three from record 2: forbid all shadowing, allow it in nested
+blocks only, or also allow a second `let` of a name in one block.
+
+**Elsewhere.** [Go allows a redeclaration in an inner block][go-scope], as do
+C and C++; [Rust also lets a later `let` in the same block shadow an earlier
+one][rs-let]; [Zig forbids it][zig-shadow].
+
+**Decision.** Allow shadowing in nested blocks only. Names declared in the same
+scope must still be distinct. A local or loop variable declared in a nested
+local scope may reuse the name of a local, parameter or loop variable from an
+enclosing scope; from its declaration to the end of its block the name refers
+to the new declaration, and afterwards to the outer one again. `print` and
+every top-level function and struct remain off limits: no parameter, local or
+loop variable may take their names. Parameters still share one scope with the
+locals directly in the function body, and a loop variable with the locals
+directly in the loop body, so reusing one there is a duplicate. A local still
+becomes visible only after its complete declaration, so in an inner block
+`let total = total + 1;` reads the outer `total`.
+
+**Why.** Inner-block shadowing is what C, C++, Go and Java programmers expect,
+it lets nested loops and small helper blocks reuse natural names, and it keeps
+resolution simple: look outward from the use and stop at the nearest
+declaration. Same-block redeclaration is left out because it lets one name
+change type partway through a block, which is harder to read in numerical code;
+it can still be added later without breaking programs.
+
+**Consequences.**
+
+```vortex
+// statements: valid
+let total = 5;
+{
+    let total = total + 1; // shadows the outer total: 6
+    print(total);
+}
+print(total); // 5
+```
+
+Name resolution must resolve an initializer before adding the new name, and
+must link every use to one declaration so later stages never compare
+spellings. Pages changed: the declarations, statements, grammar and
+diagnostics chapters, both glossaries, tour chapters 9 and 10, guide stages 4
+and 7, the workbook, the add-an-AST-node recipe, the roadmap and the cheat
 sheet.
 
 [zig-shadow]: https://ziglang.org/documentation/0.16.0/#Shadowing

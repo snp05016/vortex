@@ -398,9 +398,10 @@ let left, right = 0, 1;
 
 **Semantic checks:** infer an omitted type, check an explicit type against the
 initializer, and record mutability. The name becomes visible only after the
-whole declaration and must not reuse any visible name, because Vortex has no
-shadowing ([Scopes](declarations.md#36-scopes),
-[decision record](../decisions/names.md#d2)).
+whole declaration. It must be distinct from the other names in its scope and
+from every top-level name and `print`; in a nested block it may shadow an outer
+local, parameter or loop variable ([Scopes](declarations.md#36-scopes),
+[decision record](../decisions/names.md#d57)).
 
 **AST responsibility:** preserve the name, `mut` flag, optional written type,
 initializer, and location.
@@ -679,9 +680,10 @@ must be a range whose two endpoints have the same integer type after literal
 typing; otherwise it is a type error. The loop variable has that type, is
 immutable, and is visible only in the body
 ([Statements 6.8](statements.md#68-for-loops),
-[decision 13](../decisions/statements.md#d13)). The loop variable must not
-reuse a visible name, and a local declared directly in the loop body must not
-reuse the loop variable's name.
+[decision 13](../decisions/statements.md#d13)). The loop variable may shadow
+an outer local, parameter or loop variable but not a top-level name or
+`print`, and a local declared directly in the loop body must not reuse the
+loop variable's name.
 
 **AST responsibility:** preserve the variable name, iterable, and body.
 

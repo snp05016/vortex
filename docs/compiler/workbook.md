@@ -102,7 +102,7 @@
 - [ ] The tour's `print(inside);` after its block is rejected. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
 - [ ] Duplicate locals, parameters, fields and top-level functions are each rejected, marking the second declaration. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
 - [ ] No `main`, a wrong `main` signature, and two `main` functions each give the right single error. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
-- [ ] A shadowing local, parameter or loop variable, and a name reused from a declaration or `print`, are each rejected. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
+- [ ] An inner local or loop variable shadowing an outer one is accepted and uses link to the nearest declaration; a local, parameter or loop variable named like a top-level declaration or `print` is rejected. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
 - [ ] A forward call, recursion, mutual recursion and a forward struct field type all resolve. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
 - [ ] `struct Point` beside `fn Point`, and a top-level `fn print`, are each rejected. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))
 - [ ] Stage 3 parser tests still pass, and `unknown_name + true` now fails here with two name errors. ([finish line](guide/stage-4-names-and-scopes.md#how-you-know-it-is-finished))

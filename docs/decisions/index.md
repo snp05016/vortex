@@ -4,7 +4,7 @@
 
 The [specification](../specification/index.md) states the rules; these records explain why each rule was chosen. When the two disagree, the specification wins (see [document authority](../specification/conformance.md#11-document-authority)), and the disagreement is a documentation bug.
 
-**Status.** Every record below is *Accepted*, decided on 2026-09-23 by applying the recommendations of the open-questions review. A record can be revisited: a new record then replaces it, and the old one links to its replacement.
+**Status.** Records 1 to 56 were decided on 2026-09-23 by applying the recommendations of the open-questions review; later records revisit them. Record 2 is *Superseded* by record 57; every other record is *Accepted*. A record can be revisited: a new record then replaces it, and the old one links to its replacement.
 
 The [implementation choices](implementation.md) page is different: it lists eleven questions the compiler guide leaves to the implementer, each with a suggested default. They are not language rules.
 
@@ -22,9 +22,10 @@ The [implementation choices](implementation.md) page is different: it lists elev
 
 | Record | Decision |
 | --- | --- |
-| [2. No shadowing](names.md#d2) | A declaration must not reuse any visible name; parameters share the body's scope; locals are visible after their declaration. |
+| [2. No shadowing](names.md#d2) | *Superseded by record 57.* A declaration must not reuse any visible name. |
 | [3. Declaration order](names.md#d3) | Top-level names are visible file-wide, so calls to later functions, recursion and mutual recursion are allowed. |
 | [5. One namespace for top-level names](names.md#d5) | Functions, structs and print share one namespace; a clash is a name error; fields are separate. |
+| [57. Shadowing in inner blocks](names.md#d57) | An inner block may shadow an outer local, parameter or loop variable; same-scope duplicates and top-level names stay name errors. |
 
 ## [Numbers, literals and casts](numbers.md)
 

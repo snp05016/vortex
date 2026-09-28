@@ -47,10 +47,11 @@ top level.
 ### Name error
 
 <a class="vx-rule" id="diag.categories.name" href="#diag.categories.name">diag.categories.name</a> A name is unknown, duplicated in the same scope, used outside its scope, or
-declared where another declaration of the same name is visible. Vortex has no
-shadowing, and all top-level names share one namespace
+a parameter, local or loop variable takes the name of `print` or of a
+top-level function or struct. Shadowing an outer local in a nested block is
+allowed, and all top-level names share one namespace
 ([Scopes](declarations.md#36-scopes); decision records
-[2](../decisions/names.md#d2) and [5](../decisions/names.md#d5)). A named type
+[57](../decisions/names.md#d57) and [5](../decisions/names.md#d5)). A named type
 that does not resolve also produces a name error.
 
 ### Type error

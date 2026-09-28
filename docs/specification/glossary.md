@@ -184,7 +184,7 @@ mutable
 
 name resolution
 : Connecting each name use to one visible declaration and diagnosing unknown,
-  duplicate, shadowing, or out-of-scope names.
+  duplicate, or out-of-scope names and names that take a top-level name.
 
 named type
 : A type written as an identifier and preserved until name resolution selects
@@ -267,8 +267,9 @@ semantic analysis
 
 shadowing
 : Declaring a name while another declaration of the same name is visible, so
-  that the new one would hide the old one. Vortex v0.1 forbids it; see
-  [Scopes](declarations.md#36-scopes).
+  that the new one hides the old one. Vortex allows it only for a local or loop
+  variable in a nested block hiding an outer local, parameter or loop
+  variable; see [Scopes](declarations.md#36-scopes).
 
 shape
 : The ordered list of fixed extents for an array. Shape is part of an array

@@ -452,7 +452,7 @@ scope
 : The region of source text where a declaration's name can be used.
 
 shadowing
-: Declaring a name in an inner scope that an outer scope already declares, so the inner one would take over inside; Vortex forbids it, and such a declaration is a name error.
+: Declaring a name in an inner scope that an outer scope already declares, so the inner one takes over inside; Vortex allows it for a local or loop variable hiding an outer local, parameter or loop variable, but never for a top-level name or `print`.
 
 shape
 : The list of an array's sizes, one per dimension.

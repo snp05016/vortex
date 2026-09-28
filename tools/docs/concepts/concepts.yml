@@ -997,15 +997,18 @@ concepts:
 
   - id: shadowing
     term: shadowing
-    short: Declaring a name that another visible declaration already uses; v0.1 forbids it as a name error.
+    short: Declaring a name in an inner block that an outer local already uses, so the new one hides the old one there.
     definition: >-
       Declaring a name while another declaration of the same name is visible,
-      so that the new one would hide the old one inside its scope. Vortex v0.1
-      forbids it: such a declaration is a name error (decision 2).
+      so that the new one hides the old one inside its scope. Vortex allows it
+      for a local or loop variable in a nested block hiding an outer local,
+      parameter or loop variable (decision 57); taking a top-level name or
+      `print` is still a name error.
     spec: >-
       Declaring a name while another declaration of the same name is visible, so
-      that the new one would hide the old one. Vortex v0.1 forbids it; see
-      [Scopes](declarations.md#36-scopes).
+      that the new one hides the old one. Vortex allows it only for a local or loop
+      variable in a nested block hiding an outer local, parameter or loop
+      variable; see [Scopes](declarations.md#36-scopes).
     spec_ref: specification/declarations.md#36-scopes
     introduced_in: language-tour/10-declarations.md
     requires: [nested-scope, declaration]
@@ -1013,7 +1016,7 @@ concepts:
       - specification/declarations.md
       - compiler/guide/stage-4-names-and-scopes.md
     recall_question: What is it called when an inner block redeclares a name that an outer block already declares, and does v0.1 allow it?
-    recall_answer: Shadowing. v0.1 forbids it; redeclaring a visible name is a name error.
+    recall_answer: Shadowing. Vortex allows it; inside the inner block the name means the new declaration.
 
   - id: function
     term: function
@@ -2386,7 +2389,7 @@ concepts:
       unknown, duplicate and out-of-scope names.
     spec: >-
       Connecting each name use to one visible declaration and diagnosing
-      unknown, duplicate, shadowing, or out-of-scope names.
+      unknown, duplicate, or out-of-scope names and names that take a top-level name.
     spec_ref: specification/declarations.md#37-name-resolution
     introduced_in: compiler/guide/stage-4-names-and-scopes.md
     requires: [use, declaration, lookup]

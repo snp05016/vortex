@@ -394,8 +394,8 @@ fn main() {
 
     No. Every top-level function and struct name is visible throughout the
     file, so no parameter, local or loop variable may reuse it: doing so is a
-    name error, the same rule that blocks shadowing inside a nested block
-    ([decision](../decisions/names.md#d2)).
+    name error. Shadowing only lets a local hide another local, parameter or
+    loop variable ([decision](../decisions/names.md#d57)).
 
 Names are case-sensitive. A name cannot start with a number, and names can
 contain ASCII letters, numbers, and `_`:
@@ -407,21 +407,26 @@ let ItemCount = 8;
 ```
 
 These are different names. The compiler rejects duplicate declarations in the
-same scope. Vortex also has no shadowing: a declaration cannot reuse a name
-that is already visible, even inside an inner block, and a local, parameter or
-loop variable cannot take the name of a top-level function or struct, or
-`print` ([decision record](../decisions/names.md#d2)).
+same scope. An inner block may reuse an outer local's name: that is
+**shadowing**, and inside the block the name means the new declaration. A
+local, parameter or loop variable still cannot take the name of a top-level
+function or struct, or `print` ([decision record](../decisions/names.md#d57)).
+
+```vortex
+// statements: valid
+let total = 5;
+{
+    let total = total + 1; // shadows the outer total, reading it first
+    print(total);          // prints 6
+}
+print(total);              // prints 5
+```
 
 ```vortex
 // statements: name error
 let total = 5;
-{
-    let total = 6; // name error: total is already visible
-}
+let total = 6; // name error: total is already declared in this scope
 ```
-
-Blocks that are never open at the same time can reuse a name, so two loops one
-after the other may both use `index`.
 
 ## Declaration grammar
 
@@ -538,8 +543,10 @@ Answers:
       struct type. A field is never placed in a local or program scope, so it
       may share its name with a function, a struct or a variable.
     - **Does Vortex allow a declaration to reuse a name already visible where
-      it appears?** No. That would be shadowing, and Vortex has none: each
-      name has one meaning at every point in the scopes where it is visible.
+      it appears?** Only in a nested block, and only for locals, parameters
+      and loop variables: the inner declaration shadows the outer one until
+      its block ends. Reusing a name in the same scope, or a top-level name,
+      is a name error.
 
 ## Where this comes back
 

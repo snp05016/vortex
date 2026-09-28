@@ -207,15 +207,25 @@ end of its block. A parameter is visible in the whole function body. A loop
 variable is visible only in the loop body. It is immutable, so assigning to it
 is a semantic error ([Statements 6.8](statements.md#68-for-loops)).
 
-<a class="vx-rule" id="decl.scopes.no-shadowing" href="#decl.scopes.no-shadowing">decl.scopes.no-shadowing</a> Names declared in the same scope must be distinct. A declaration also must not
-have the same name as any other declaration that is visible where it appears:
-Vortex has no shadowing, so an inner declaration never hides an outer one.
-Because `print` and every top-level function and struct are visible
-everywhere, no parameter, local variable or loop variable may take one of
-their names. Declarations that are never visible at the same point may share a
-name, such as locals in two sibling blocks or the variables of two consecutive
-`for` loops. A violation of any rule in this paragraph is a name error
-([decision record](../decisions/names.md#d2)).
+<a id="decl.scopes.no-shadowing"></a><a class="vx-rule" id="decl.scopes.block-shadowing" href="#decl.scopes.block-shadowing">decl.scopes.block-shadowing</a> Names declared in the same scope must be distinct. A local variable or loop
+variable declared in a nested local scope may reuse the name of a local
+variable, parameter or loop variable from an enclosing scope. That is
+**shadowing**: from the new declaration to the end of its block, the name
+refers to the new declaration, and once the block ends the outer declaration
+is visible again. Because `print` and every top-level function and struct are
+visible everywhere, no parameter, local variable or loop variable may take one
+of their names. A violation of any rule in this paragraph is a name error
+([decision record](../decisions/names.md#d57)).
+
+```vortex
+// statements: valid
+let total = 5;
+{
+    let total = total + 1; // shadows the outer total, reading it: 6
+    print(total);          // prints 6
+}
+print(total);              // prints 5
+```
 
 <a class="vx-rule" id="decl.scopes.top-level-uniqueness" href="#decl.scopes.top-level-uniqueness">decl.scopes.top-level-uniqueness</a> Two top-level declarations must not have the same name, whatever their kinds,
 so `struct Point` and `fn Point` cannot appear in the same program, and no
@@ -241,7 +251,7 @@ fn main() {
 ```
 
 <a class="vx-rule" id="decl.resolution.diagnostics" href="#decl.resolution.diagnostics">decl.resolution.diagnostics</a> Name resolution must diagnose unknown names, duplicate declarations,
-declarations that reuse a visible name, invalid scope use, and unresolved
+declarations that take a top-level name or `print`, invalid scope use, and unresolved
 named types with the relevant source location.
 
 ## 3.8 Excluded declaration forms

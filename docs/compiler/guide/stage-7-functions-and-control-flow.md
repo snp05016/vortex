@@ -531,11 +531,12 @@ takes the most recent locals with it.[^ci-locals]
 A `let` inside a loop body runs on every pass through the body. Each iteration
 gets a fresh variable with a freshly computed initializer. That is easy to get
 right by accident and easy to get wrong when optimizing, so it deserves a
-test. One related rule is settled in stage 4: an inner block may not declare a
-local with the same name as a visible outer one, because Vortex has no
-shadowing ([decision record](../../decisions/names.md#d2)). So at any point in
-a program each name means exactly one variable, and code generation never has
-to choose between two.
+test. One related rule is settled in stage 4: an inner block may declare a
+local with the same name as a visible outer one, shadowing it until the block
+ends ([decision record](../../decisions/names.md#d57)). Name resolution has
+already linked every use to one declaration, so code generation works from
+those links, never from spellings: the inner and outer variables get separate
+storage, and the outer one keeps its value while it is hidden.
 
 ## Tests for nested control flow
 

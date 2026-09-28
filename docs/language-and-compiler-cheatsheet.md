@@ -210,7 +210,7 @@ from an argument when the function is called.
 | --- | --- | --- |
 | Function declaration | At the top level: `fn name(...)` | Register its name and full signature, then check its body in a new scope. |
 | Struct declaration | At the top level: `struct Name { ... }` | Register the type name, then collect and validate its fields. |
-| Variable declaration | Inside a block: `let` or `let mut` | Check its initializer, reject the name if it is already visible, then add the variable to the current scope. |
+| Variable declaration | Inside a block: `let` or `let mut` | Check its initializer, reject the name if it is already in the current scope or is a top-level name, then add the variable to the current scope (it may shadow an outer local). |
 | Parameter declaration | Inside a function's parameter list | Add the parameter name and declared type to the function scope. |
 | Field declaration | Inside a struct declaration | Add the field name and type to that struct and reject duplicate names. |
 
@@ -218,7 +218,7 @@ For a quick compiler rule: top-level declarations go in the global symbol
 table and are visible in the whole file, even above their declarations
 ([decision record](decisions/names.md#d3)); parameters share one scope with
 the locals of the function body, each nested block adds a scope, and a new
-name must not match any visible name; fields belong to their struct's
+name may shadow an outer local but not a top-level name; fields belong to their struct's
 definition. Functions, structs and `print` share one set of top-level names,
 so a struct and a function cannot have the same name
 ([decision record](decisions/names.md#d5)).
@@ -338,8 +338,8 @@ A sequence of statements surrounded by braces:
 ### Scope
 
 The region where a declared name is visible. A function body and each nested
-block create scopes. Vortex has no shadowing: a declaration cannot reuse a name
-that is already visible ([decision record](decisions/names.md#d2)).
+block create scopes. An inner block may shadow an outer local's name until
+the block ends ([decision record](decisions/names.md#d57)).
 
 ### Struct
 
