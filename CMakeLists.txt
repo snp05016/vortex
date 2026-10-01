@@ -3,6 +3,33 @@ project(Vortex LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+execute_process(
+    COMMAND llvm-config --includedir
+    OUTPUT_VARIABLE LLVM_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+execute_process(
+    COMMAND llvm-config --libdir
+    OUTPUT_VARIABLE LLVM_LIBRARY_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+execute_process(
+    COMMAND llvm-config --system-libs
+    OUTPUT_VARIABLE LLVM_SYSTEM_LIBS_STRING
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+separate_arguments(LLVM_SYSTEM_LIBS UNIX_COMMAND "${LLVM_SYSTEM_LIBS_STRING}")
+list(FILTER LLVM_SYSTEM_LIBS EXCLUDE REGEX "^-lzstd$")
+find_library(LLVM_SUPPORT_LIBRARY LLVMSupport PATHS ${LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
+find_library(LLVM_DEMANGLE_LIBRARY LLVMDemangle PATHS ${LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
+
+if(NOT LLVM_INCLUDE_DIR OR NOT LLVM_SUPPORT_LIBRARY OR NOT LLVM_DEMANGLE_LIBRARY)
+    message(FATAL_ERROR "LLVM headers and libraries are required")
+endif()
+
 enable_testing()
 
 add_library(vortex_compiler
@@ -15,7 +42,12 @@ add_library(vortex_compiler
     src/frontend/parser/parser_declarations.cpp
     src/frontend/parser/parser_types.cpp
     )
-target_include_directories(vortex_compiler PUBLIC src)
+target_include_directories(vortex_compiler PUBLIC src ${LLVM_INCLUDE_DIR})
+target_link_libraries(vortex_compiler PUBLIC
+    ${LLVM_SUPPORT_LIBRARY}
+    ${LLVM_DEMANGLE_LIBRARY}
+    ${LLVM_SYSTEM_LIBS}
+)
 target_compile_options(vortex_compiler PRIVATE -std=c++26)
 
 add_executable(vortex_debug

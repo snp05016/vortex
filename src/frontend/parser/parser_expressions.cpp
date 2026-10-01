@@ -115,7 +115,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
         if (suffix.kind == TokenKind::PUNC_LPAREN) {
             SourceLocation const expression_location = expression->location();
             advance();
-            std::vector<std::unique_ptr<Expr>> arguments;
+            llvm::SmallVector<std::unique_ptr<Expr>, 4> arguments;
             if (!check(TokenKind::PUNC_RPAREN)) {
                 while (true) {
                     arguments.push_back(parse_expression());
@@ -140,7 +140,7 @@ std::unique_ptr<Expr> Parser::parse_postfix() {
             if (check(TokenKind::PUNC_RBRACKET)) {
                 ParserError::expected(peek().location, "index expression");
             }
-            std::vector<std::unique_ptr<Expr>> indices;
+            llvm::SmallVector<std::unique_ptr<Expr>, 2> indices;
             while (true) {
                 indices.push_back(parse_expression());
                 if (!match(TokenKind::PUNC_COMMA)) {
@@ -273,7 +273,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
             peek(1).kind == TokenKind::IDENTIFIER &&
             peek(2).kind == TokenKind::PUNC_COLON) {
             advance();
-            std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields;
+            llvm::SmallVector<std::pair<std::string, std::unique_ptr<Expr>>, 8>
+                fields;
 
             if (check(TokenKind::PUNC_RBRACE)) {
                 ParserError::invalid(peek().location,
@@ -328,7 +329,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         }
 
         if (match(TokenKind::PUNC_SEMICOLON)) {
-            std::vector<std::unique_ptr<Expr>> dimensions;
+            llvm::SmallVector<std::unique_ptr<Expr>, 2> dimensions;
             auto dimension = parse_expression();
             if (!dimension) {
                 ParserError::expected(peek().location, "array dimension");
@@ -349,7 +350,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
                 tok.location, std::move(first), std::move(dimensions));
         }
 
-        std::vector<std::unique_ptr<Expr>> elements;
+        llvm::SmallVector<std::unique_ptr<Expr>, 8> elements;
         elements.push_back(std::move(first));
         while (match(TokenKind::PUNC_COMMA)) {
             if (check(TokenKind::PUNC_RBRACKET)) {

@@ -40,16 +40,17 @@ std::unique_ptr<Decl> Parser::parse_function_declaration() {
     if (!match(TokenKind::PUNC_LPAREN)) {
         ParserError::expected(peek().location, "'('", "after function name");
     }
-    std::vector<ParamDecl> parameters;
+    llvm::SmallVector<ParamDecl, 4> parameters;
     if (!check(TokenKind::PUNC_RPAREN)) {
         while (true) {
-            Token parameter_token = peek();
+            Token const parameter_token = peek();
             if (parameter_token.kind != TokenKind::IDENTIFIER) {
                 ParserError::expected(parameter_token.location,
                                       "parameter name",
                                       "in function declaration");
             }
-            std::string parameter_name = parameter_token.current_token_string();
+            std::string const parameter_name =
+                parameter_token.current_token_string();
             advance(); // consume the parameter name.
             if (!match(TokenKind::PUNC_COLON)) {
                 ParserError::expected(peek().location, "':'",
@@ -132,13 +133,13 @@ std::unique_ptr<Decl> Parser::parse_struct_declaration() {
     if (!match(TokenKind::PUNC_LBRACE)) {
         ParserError::expected(peek().location, "'{'", "after struct name");
     }
-    std::vector<StructFieldDecl> fields;
+    llvm::SmallVector<StructFieldDecl, 8> fields;
     while (!check(TokenKind::PUNC_RBRACE)) {
         if (check(TokenKind::EOF_TOKEN)) {
             ParserError::expected(peek().location, "'}'",
                                   "after struct fields");
         }
-        Token curr_struct_field = peek();
+        Token const curr_struct_field = peek();
         if (curr_struct_field.kind != TokenKind::IDENTIFIER) {
             ParserError::expected(curr_struct_field.location,
                                   "struct field name");

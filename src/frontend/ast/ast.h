@@ -1,6 +1,8 @@
 #pragma once
 #include "../lexer/token.h"
 #include <cstdint>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/SmallVector.h>
 #include <memory>
 #include <string>
 #include <utility>
@@ -295,7 +297,7 @@ struct CallCastExpr : public Expr {
 
     // create a new call cast expression node with the location
     CallCastExpr(SourceLocation location, std::unique_ptr<Expr> function,
-                 std::vector<std::unique_ptr<Expr>> arguments)
+                 llvm::SmallVector<std::unique_ptr<Expr>, 4> arguments)
         : Expr(location), function_(std::move(function)),
           arguments_(std::move(arguments)) {
     }
@@ -304,7 +306,7 @@ struct CallCastExpr : public Expr {
         return *function_;
     }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &arguments() const {
+    [[nodiscard]] llvm::ArrayRef<std::unique_ptr<Expr>> arguments() const {
         return arguments_;
     }
 
@@ -312,7 +314,7 @@ struct CallCastExpr : public Expr {
     // member variable to store the function being called
     std::unique_ptr<Expr> function_;
     // member variable to store the arguments of the function call
-    std::vector<std::unique_ptr<Expr>> arguments_;
+    llvm::SmallVector<std::unique_ptr<Expr>, 4> arguments_;
 };
 
 /* represents a numeric conversion expression. */
@@ -347,7 +349,7 @@ struct IndexExpr : public Expr {
 
     // create a new index expression node with the location
     IndexExpr(SourceLocation location, std::unique_ptr<Expr> collection,
-              std::vector<std::unique_ptr<Expr>> index)
+              llvm::SmallVector<std::unique_ptr<Expr>, 2> index)
         : Expr(location), collection_(std::move(collection)),
           index_(std::move(index)) {
     }
@@ -356,7 +358,7 @@ struct IndexExpr : public Expr {
         return *collection_;
     }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &indices() const {
+    [[nodiscard]] llvm::ArrayRef<std::unique_ptr<Expr>> indices() const {
         return index_;
     }
 
@@ -365,7 +367,7 @@ struct IndexExpr : public Expr {
     std::unique_ptr<Expr> collection_;
     // member variable to store the index expression
     // A vector allows multi-dimensional indexing.
-    std::vector<std::unique_ptr<Expr>> index_;
+    llvm::SmallVector<std::unique_ptr<Expr>, 2> index_;
 };
 
 /* represents an expression that accesses a named field. */
@@ -405,17 +407,17 @@ struct ArrayExpr : public Expr {
 
     // create a new array expression node with the location
     ArrayExpr(SourceLocation location,
-              std::vector<std::unique_ptr<Expr>> elements)
+              llvm::SmallVector<std::unique_ptr<Expr>, 8> elements)
         : Expr(location), elements_(std::move(elements)) {
     }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &elements() const {
+    [[nodiscard]] llvm::ArrayRef<std::unique_ptr<Expr>> elements() const {
         return elements_;
     }
 
   private:
     // member variable to store the elements of the array expression
-    std::vector<std::unique_ptr<Expr>> elements_;
+    llvm::SmallVector<std::unique_ptr<Expr>, 8> elements_;
 };
 
 // represents an array expression that repeats a single element a specified
@@ -427,7 +429,7 @@ struct RepeatArrayExpr : public Expr {
         default; // virtual destructor for proper cleanup of derived classes
 
     RepeatArrayExpr(SourceLocation location, std::unique_ptr<Expr> value_,
-                    std::vector<std::unique_ptr<Expr>> dimensions_)
+                    llvm::SmallVector<std::unique_ptr<Expr>, 2> dimensions_)
         : Expr(location), value_(std::move(value_)),
           dimensions_(std::move(dimensions_)) {
     }
@@ -436,7 +438,7 @@ struct RepeatArrayExpr : public Expr {
         return *value_;
     }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &dimensions() const {
+    [[nodiscard]] llvm::ArrayRef<std::unique_ptr<Expr>> dimensions() const {
         return dimensions_;
     }
 
@@ -444,7 +446,7 @@ struct RepeatArrayExpr : public Expr {
     // member variable to store the value to be repeated
     std::unique_ptr<Expr> value_;
     // member variable to store the dimensions of the array
-    std::vector<std::unique_ptr<Expr>> dimensions_;
+    llvm::SmallVector<std::unique_ptr<Expr>, 2> dimensions_;
 };
 
 /* represents an expression that constructs a struct value. */
@@ -456,7 +458,8 @@ struct StructConstructionExpr : public Expr {
     // create a new struct construction expression node with the location
     StructConstructionExpr(
         SourceLocation location, std::string struct_name,
-        std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields)
+        llvm::SmallVector<std::pair<std::string, std::unique_ptr<Expr>>, 8>
+            fields)
         : Expr(location), struct_name_(std::move(struct_name)),
           fields_(std::move(fields)) {
     }
@@ -465,8 +468,7 @@ struct StructConstructionExpr : public Expr {
         return struct_name_;
     }
 
-    [[nodiscard]] const std::vector<
-        std::pair<std::string, std::unique_ptr<Expr>>> &
+    [[nodiscard]] llvm::ArrayRef<std::pair<std::string, std::unique_ptr<Expr>>>
     fields() const {
         return fields_;
     }
@@ -476,7 +478,7 @@ struct StructConstructionExpr : public Expr {
     std::string struct_name_;
     // member variable to store the fields of the struct construction
     // expression, in the form <name> { <string> : <expr> }
-    std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields_;
+    llvm::SmallVector<std::pair<std::string, std::unique_ptr<Expr>>, 8> fields_;
 };
 
 // statments include:
@@ -786,7 +788,7 @@ struct FunctionDecl : public Decl {
     ~FunctionDecl() override = default;
 
     FunctionDecl(SourceLocation location, std::string function_name,
-                 std::vector<ParamDecl> parameters,
+                 llvm::SmallVector<ParamDecl, 4> parameters,
                  std::unique_ptr<Type> return_type,
                  std::unique_ptr<BlockStmt> body)
         : Decl(location), function_name_(std::move(function_name)),
@@ -798,7 +800,7 @@ struct FunctionDecl : public Decl {
         return function_name_;
     }
 
-    [[nodiscard]] const std::vector<ParamDecl> &parameters() const {
+    [[nodiscard]] llvm::ArrayRef<ParamDecl> parameters() const {
         return parameters_;
     }
 
@@ -812,7 +814,7 @@ struct FunctionDecl : public Decl {
 
   private:
     std::string function_name_;
-    std::vector<ParamDecl> parameters_;
+    llvm::SmallVector<ParamDecl, 4> parameters_;
     std::unique_ptr<Type> return_type_;
     std::unique_ptr<BlockStmt> body_;
 };
@@ -823,7 +825,7 @@ struct StructDecl : public Decl {
     ~StructDecl() override = default;
 
     StructDecl(SourceLocation location, std::string struct_name,
-               std::vector<StructFieldDecl> fields)
+               llvm::SmallVector<StructFieldDecl, 8> fields)
         : Decl(location), struct_name_(std::move(struct_name)),
           fields_(std::move(fields)) {
     }
@@ -832,13 +834,13 @@ struct StructDecl : public Decl {
         return struct_name_;
     }
 
-    [[nodiscard]] const std::vector<StructFieldDecl> &fields() const {
+    [[nodiscard]] llvm::ArrayRef<StructFieldDecl> fields() const {
         return fields_;
     }
 
   private:
     std::string struct_name_;
-    std::vector<StructFieldDecl> fields_;
+    llvm::SmallVector<StructFieldDecl, 8> fields_;
 };
 // type of primitive kind
 enum class PrimitiveTypeKind {
@@ -871,7 +873,7 @@ struct PrimitiveType : public Type {
 struct ArrayType : public Type {
   public:
     ArrayType(SourceLocation location, std::unique_ptr<Type> element_type,
-              std::vector<std::unique_ptr<Expr>> dimensions)
+              llvm::SmallVector<std::unique_ptr<Expr>, 2> dimensions)
         : Type(location), element_type_(std::move(element_type)),
           dimensions_(std::move(dimensions)) {
     }
@@ -880,13 +882,13 @@ struct ArrayType : public Type {
         return *element_type_;
     }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<Expr>> &dimensions() const {
+    [[nodiscard]] llvm::ArrayRef<std::unique_ptr<Expr>> dimensions() const {
         return dimensions_;
     }
 
   private:
     std::unique_ptr<Type> element_type_;
-    std::vector<std::unique_ptr<Expr>> dimensions_;
+    llvm::SmallVector<std::unique_ptr<Expr>, 2> dimensions_;
 };
 
 struct StructType : public Type {

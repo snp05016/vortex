@@ -76,7 +76,7 @@ std::unique_ptr<Type> Parser::check_array_type() {
     if (check(TokenKind::PUNC_RBRACKET)) {
         ParserError::expected(peek().location, "array dimension");
     }
-    std::vector<std::unique_ptr<Expr>> dimensions;
+    llvm::SmallVector<std::unique_ptr<Expr>, 2> dimensions;
     while (true) {
         auto dimension = parse_expression();
         dimensions.push_back(std::move(dimension));
