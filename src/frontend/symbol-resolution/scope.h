@@ -29,6 +29,7 @@ class ScopeStack {
   public:
     ScopeStack() {
         scopes_.emplace_back(); // global/program scope always exists initially
+        declare(Symbol{SymbolKind::Builtin, "print", {0, 0}, nullptr});
     }
 
     void enter_scope() {
