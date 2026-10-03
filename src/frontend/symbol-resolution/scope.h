@@ -45,26 +45,17 @@ class ScopeStack {
     // Returns true if insertion succeeded, false if a symbol with the same name
     // already exists in the current scope.
     bool declare(const Symbol &sym) {
-        if (scopes_.empty()) {
-            return false;
-        }
-        auto &current = scopes_.back();
-        if (current.find(sym.name) != current.end()) {
+        auto [slot, inserted] = scopes_.back().try_emplace(sym.name, nullptr);
+        if (!inserted) {
             return false;
         }
         symbol_pool_.emplace_back(sym);
-        current[sym.name] = &symbol_pool_.back();
+        slot->second = &symbol_pool_.back();
         return true;
     }
 
     bool declare(const std::string &name, SymbolKind kind, SourceLocation loc,
                  const Node *decl, bool is_mutable = false) {
-        if (decl != nullptr) {
-            if (const auto *var_decl =
-                    dynamic_cast<const VarDeclStmt *>(decl)) {
-                is_mutable = var_decl->is_mutable();
-            }
-        }
         return declare(Symbol{kind, name, loc, decl, is_mutable});
     }
 
@@ -83,9 +74,6 @@ class ScopeStack {
     // Looks up a symbol only in the current (innermost) scope without checking
     // outer scopes.
     [[nodiscard]] const Symbol *lookup_current(const std::string &name) const {
-        if (scopes_.empty()) {
-            return nullptr;
-        }
         auto found = scopes_.back().find(name);
         return found != scopes_.back().end() ? found->second : nullptr;
     }
@@ -107,14 +95,6 @@ class ScopeStack {
             }
         }
         return nullptr;
-    }
-
-    [[nodiscard]] size_t depth() const {
-        return scopes_.size();
-    }
-
-    [[nodiscard]] bool is_global_scope() const {
-        return scopes_.size() <= 1;
     }
 
   private:
