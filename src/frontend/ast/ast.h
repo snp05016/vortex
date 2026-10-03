@@ -25,11 +25,6 @@ class Node {
     virtual ~Node() = default; // virtual destructor to ensure proper cleanup of
                                // derived classes
 
-    Node(const Node &) = default;
-    Node &operator=(const Node &) = default;
-    Node(Node &&) noexcept = default;
-    Node &operator=(Node &&) noexcept = default;
-
     [[nodiscard]] SourceLocation location() const { // getter for the location
         return location_;
     }
@@ -74,12 +69,6 @@ struct Decl : public Node {
   public:
     ~Decl() override =
         default; // virtual destructor for proper cleanup of derived classes
-
-    Decl(const Decl &) = default;
-    Decl &operator=(const Decl &) = default;
-    Decl(Decl &&) noexcept = default;
-    Decl &operator=(Decl &&) noexcept = default;
-
   protected:
     // create a new decl node with the location
     explicit Decl(SourceLocation location) : Node(location) {
@@ -741,10 +730,6 @@ struct BlockStmt : public Stmt {
 // in fn add(left:i32, right:i32) {}
 struct ParamDecl : public Decl {
   public:
-    ~ParamDecl() override = default;
-    ParamDecl(ParamDecl &&) noexcept = default;
-    ParamDecl &operator=(ParamDecl &&) noexcept = default;
-
     ParamDecl(SourceLocation location, std::string param_name,
               std::unique_ptr<Type> param_type)
         : Decl(location), param_name_(std::move(param_name)),
@@ -768,10 +753,6 @@ struct ParamDecl : public Decl {
 // , y:i32 }
 struct StructFieldDecl : public Decl {
   public:
-    ~StructFieldDecl() override = default;
-    StructFieldDecl(StructFieldDecl &&) noexcept = default;
-    StructFieldDecl &operator=(StructFieldDecl &&) noexcept = default;
-
     StructFieldDecl(SourceLocation location, std::string struct_param_name,
                     std::unique_ptr<Type> struct_param_type)
         : Decl(location), struct_param_name_(std::move(struct_param_name)),
