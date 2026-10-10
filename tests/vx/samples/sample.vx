@@ -5,11 +5,11 @@ fn main() {
     let result = value + 5;
     let array: [i32; 5] = [2, 4, 6, 8, 10];
     for i in 0..result {
-        println("Value: {}", i);
+        print("Value: {}", i);
         if i % 2 == 0 {
-            println("Even");
+            print("Even");
         } else {
-            println("Odd");
+            print("Odd");
         }
     }
 }

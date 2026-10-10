@@ -6,6 +6,7 @@
 #include "llvm/ADT/StringMap.h"
 #include <cassert>
 #include <deque>
+#include <functional>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -28,6 +29,11 @@ struct Symbol {
     bool is_mutable{false};
 };
 
+// Called with a scope's depth and symbols just before it is popped. Lets a
+// debug tool show what each scope held, since the scope is gone afterwards.
+using ScopeExitHook =
+    std::function<void(std::size_t, const llvm::StringMap<const Symbol *> &)>;
+
 class ScopeStack {
   public:
     ScopeStack() {
@@ -41,7 +47,14 @@ class ScopeStack {
 
     void exit_scope() {
         assert(scopes_.size() > 1 && "attempted to exit global scope");
+        if (scope_exit_hook_) {
+            scope_exit_hook_(scopes_.size() - 1, scopes_.back());
+        }
         scopes_.pop_back();
+    }
+
+    void set_scope_exit_hook(ScopeExitHook hook) {
+        scope_exit_hook_ = std::move(hook);
     }
 
     // Declares a symbol in the current (innermost) scope.
@@ -112,6 +125,7 @@ class ScopeStack {
     std::vector<llvm::StringMap<const Symbol *>> scopes_;
     // Stable symbol storage so pointers remain valid after exiting scopes
     std::deque<Symbol> symbol_pool_;
+    ScopeExitHook scope_exit_hook_;
 };
 
 // Resolves symbols in the AST using a stack of scopes.
@@ -143,6 +157,11 @@ class ScopeResolver {
 
     [[nodiscard]] const ScopeStack &scope_stack() const {
         return scope_stack_;
+    }
+
+    // debug aid: see ScopeExitHook
+    void set_scope_exit_hook(ScopeExitHook hook) {
+        scope_stack_.set_scope_exit_hook(std::move(hook));
     }
 
   private:

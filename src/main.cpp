@@ -25,10 +25,16 @@ bool print_ast(std::string_view title, std::string_view file_name,
         std::cout << '\n';
         TextDiagnosticListener listener(std::cerr, file_name, source);
         ScopeResolver resolver(&listener);
-        std::cout << "Resolving symbols...\n";
-        resolver.resolve(*program);
-        std::cout << "Symbol table:\n";
+        std::cout << "Resolving symbols...\n\n";
         SymbolTableDebugPrinter const symbol_printer(std::cout);
+        // each scope is shown as it closes, innermost first
+        resolver.set_scope_exit_hook(
+            [&symbol_printer](std::size_t depth,
+                              const llvm::StringMap<const Symbol *> &scope) {
+                symbol_printer.print_scope(depth, scope);
+            });
+        resolver.resolve(*program);
+        // whatever is left (the global scope) never closes, so print it here
         symbol_printer.print(resolver.scope_stack());
         return !resolver.had_errors();
     } catch (const ParserError &error) {

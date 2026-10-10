@@ -151,7 +151,7 @@ void ScopeResolver::resolve_stmt(const Stmt &stmt) {
     }
 }
 
-/*
+/* @llm written comment
  * resolve_expr walks an expression tree and hands every name it finds to
  * resolve_identifier. Most node kinds just recurse into their children:
  *
@@ -241,7 +241,7 @@ void ScopeResolver::resolve_expr(const Expr &expr) {
     }
 }
 
-/*
+/* @llm written comment
  * resolve_identifier does the actual scope lookup, and it cares about context.
  * A plain name has to be a local, parameter or loop variable:
  *
