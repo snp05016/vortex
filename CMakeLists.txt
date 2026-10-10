@@ -113,6 +113,15 @@ target_compile_options(vortex_ast_debug_printer_tests PRIVATE -std=c++26)
 
 add_test(NAME ast_debug_printer_tests COMMAND vortex_ast_debug_printer_tests)
 
+add_executable(vortex_scope_resolver_tests
+    tests/cpp/scope_resolver_tests.cpp
+)
+
+target_link_libraries(vortex_scope_resolver_tests PRIVATE vortex_compiler)
+target_compile_options(vortex_scope_resolver_tests PRIVATE -std=c++26)
+
+add_test(NAME scope_resolver_tests COMMAND vortex_scope_resolver_tests)
+
 add_executable(vortex_vx_fixture_tests
     tests/cpp/vx_fixture_tests.cpp
 )

@@ -1,10 +1,13 @@
 #include "scope.h"
 
 void ScopeResolver::error(const Node *node, const std::string &message) {
+    error_at(node->location(), message);
+}
+
+void ScopeResolver::error_at(SourceLocation loc, const std::string &message) {
     error_count_++;
     if (listener_) {
-        listener_->report(
-            {DiagnosticSeverity::Error, node->location(), message});
+        listener_->report({DiagnosticSeverity::Error, loc, message});
     }
 }
 
@@ -15,12 +18,19 @@ void ScopeResolver::note(SourceLocation loc, const std::string &message) {
 }
 
 void ScopeResolver::resolve(const Program &program) {
+    // pass 1: declare every top-level function and struct, so declaration
+    // order doesn't matter (a call may come before the function it names)
+    for (const auto &declaration : program.declarations()) {
+        declare_top_level(*declaration);
+    }
+    check_main();
+    // pass 2: resolve types and bodies now that every top-level name exists
     for (const auto &declaration : program.declarations()) {
         resolve_decl(*declaration);
     }
 }
 
-void ScopeResolver::resolve_decl(const Decl &decl) {
+void ScopeResolver::declare_top_level(const Decl &decl) {
     if (const auto *function_decl = dynamic_cast<const FunctionDecl *>(&decl)) {
         if (!scope_stack_.declare(function_decl->function_name(),
                                   SymbolKind::Function,
@@ -28,8 +38,49 @@ void ScopeResolver::resolve_decl(const Decl &decl) {
             error(&decl, "redeclaration of function '" +
                              function_decl->function_name() + "'");
         }
+    } else if (const auto *struct_decl =
+                   dynamic_cast<const StructDecl *>(&decl);
+               struct_decl &&
+               (!scope_stack_.declare(struct_decl->struct_name(),
+                                      SymbolKind::Struct,
+                                      struct_decl->location(), struct_decl))) {
+        error(&decl,
+              "redeclaration of struct '" + struct_decl->struct_name() + "'");
+    }
+}
+
+// exactly one `main`, taking no parameters and returning void. A second
+// `main` was already reported as a redeclaration, so only the first is checked.
+void ScopeResolver::check_main() {
+    const Symbol *main_symbol = scope_stack_.lookup("main");
+    if (main_symbol == nullptr || main_symbol->kind != SymbolKind::Function) {
+        error_at({0, 1}, "program has no 'main' function");
+        return;
+    }
+    const auto *main_fn =
+        dynamic_cast<const FunctionDecl *>(main_symbol->declaration_node);
+    if (!main_fn->parameters().empty()) {
+        error(main_fn, "'main' must not take parameters");
+    }
+    const auto *return_type =
+        dynamic_cast<const PrimitiveType *>(&main_fn->return_type());
+    if (return_type == nullptr ||
+        return_type->primitive_type() != PrimitiveTypeKind::Void) {
+        error(main_fn, "'main' must return void");
+    }
+}
+
+void ScopeResolver::resolve_decl(const Decl &decl) {
+    if (const auto *function_decl = dynamic_cast<const FunctionDecl *>(&decl)) {
+        // types are resolved before the parameters are declared, so a
+        // parameter name can't hide a type name
+        for (const auto &param : function_decl->parameters()) {
+            resolve_type(param.param_type());
+        }
+        resolve_type(function_decl->return_type());
+
+        // the parameters and the top level of the body share one scope
         scope_stack_.enter_scope();
-        // checks for parameter name clashes with top level decls
         for (const auto &param : function_decl->parameters()) {
             if (const Symbol *clash =
                     scope_stack_.check_illegal_shadow(param.param_name())) {
@@ -43,22 +94,18 @@ void ScopeResolver::resolve_decl(const Decl &decl) {
                                   param.param_name() + "'");
             }
         }
-        for (const auto &param : function_decl->parameters()) {
-            resolve_type(param.param_type());
-        }
-        resolve_type(function_decl->return_type());
         for (const auto &statement : function_decl->body().statements()) {
             resolve_stmt(*statement);
         }
         scope_stack_.exit_scope();
     } else if (const auto *struct_decl =
                    dynamic_cast<const StructDecl *>(&decl)) {
-        if (!scope_stack_.declare(struct_decl->struct_name(),
-                                  SymbolKind::Struct, struct_decl->location(),
-                                  struct_decl)) {
-            error(&decl, "redeclaration of struct '" +
-                             struct_decl->struct_name() + "'");
+        // field types resolve in the outer scope, where the field names
+        // aren't visible: `struct A { B: B }` means the type B
+        for (const auto &field : struct_decl->fields()) {
+            resolve_type(field.field_type());
         }
+        // the scope only exists to catch duplicate field names
         scope_stack_.enter_scope();
         for (const auto &field : struct_decl->fields()) {
             if (!scope_stack_.declare(field.field_name(), SymbolKind::Field,
@@ -66,9 +113,6 @@ void ScopeResolver::resolve_decl(const Decl &decl) {
                 error(&field,
                       "redeclaration of field '" + field.field_name() + "'");
             }
-        }
-        for (const auto &field : struct_decl->fields()) {
-            resolve_type(field.field_type());
         }
         scope_stack_.exit_scope();
     } else {
@@ -278,6 +322,10 @@ void ScopeResolver::resolve_type(const Type &type) {
 }
 
 void ScopeResolver::resolve_var_decl(const VarDeclStmt &var_decl) {
+    // `let x: T = ...`; the type is absent when it is inferred
+    if (const Type *declared_type = var_decl.var_type()) {
+        resolve_type(*declared_type);
+    }
     // resolve the initializer first so `let x = x;` doesn't see the new x
     resolve_expr(var_decl.initializer());
     // illegal shadow: a local reusing a top-level function, struct or
@@ -307,13 +355,16 @@ void ScopeResolver::resolve_block(const BlockStmt &block) {
     scope_stack_.exit_scope();
 }
 
-void ScopeResolver::resolve_break_stmt(const BreakStmt & /*break_stmt*/) {
-    // nothing to resolve for break statements
+void ScopeResolver::resolve_break_stmt(const BreakStmt &break_stmt) {
+    if (loop_depth_ == 0) {
+        error(&break_stmt, "'break' outside of a loop");
+    }
 }
 
-void ScopeResolver::resolve_continue_stmt(
-    const ContinueStmt & /*continue_stmt*/) {
-    // nothing to resolve for continue statements
+void ScopeResolver::resolve_continue_stmt(const ContinueStmt &continue_stmt) {
+    if (loop_depth_ == 0) {
+        error(&continue_stmt, "'continue' outside of a loop");
+    }
 }
 
 void ScopeResolver::resolve_ret_stmt(const RetStmt &ret_stmt) {
@@ -332,19 +383,29 @@ void ScopeResolver::resolve_if_stmt(const IfStmt &if_stmt) {
 
 void ScopeResolver::resolve_while_stmt(const WhileStmt &while_stmt) {
     resolve_expr(while_stmt.condition());
-    scope_stack_.enter_scope();
+    loop_depth_++;
     resolve_stmt(while_stmt.body());
-    scope_stack_.exit_scope();
+    loop_depth_--;
 }
 
 void ScopeResolver::resolve_for_stmt(const ForStmt &for_stmt) {
+    // the iterable is resolved outside the loop scope, so `for x in x` reads
+    // the outer x, not the loop variable
+    resolve_expr(for_stmt.iterable());
+    scope_stack_.enter_scope();
+    if (const Symbol *clash =
+            scope_stack_.check_illegal_shadow(for_stmt.var_name())) {
+        error(&for_stmt, "loop variable '" + for_stmt.var_name() +
+                             "' shadows a top-level declaration");
+        note(clash->location, "previously declared here");
+    }
     if (!scope_stack_.declare(for_stmt.var_name(), SymbolKind::LoopVariable,
                               for_stmt.location(), &for_stmt)) {
         error(&for_stmt,
               "redeclaration of loop variable '" + for_stmt.var_name() + "'");
     }
-    resolve_expr(for_stmt.iterable());
-    scope_stack_.enter_scope();
+    loop_depth_++;
     resolve_stmt(for_stmt.body());
+    loop_depth_--;
     scope_stack_.exit_scope();
 }

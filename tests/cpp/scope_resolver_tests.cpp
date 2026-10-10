@@ -26,9 +26,9 @@ void fail(std::string_view name, const std::string &message) {
 
 std::vector<std::string> resolve_errors(const std::string &source) {
     Parser parser(source.data(), source.size());
-    auto program = parser.parse();
+    auto const program = parser.parse();
     CollectingListener listener;
-    ScopeResolver(listener).resolve(*program);
+    ScopeResolver(&listener).resolve(*program);
     return listener.errors;
 }
 
@@ -57,6 +57,11 @@ void test_accepted() {
         0);
     expect("loop var shadows outer local",
            "fn main() { let i = 1; for i in 0..3 { print(i); } print(i); }", 0);
+    expect("field named like its type",
+           "fn main() {}\nstruct B { v: i32 }\nstruct A { B: B }", 0);
+    expect("break and continue in loops",
+           "fn main() { while true { break; } for i in 0..3 { continue; } }",
+           0);
 }
 
 void test_rejected() {
@@ -78,6 +83,12 @@ void test_rejected() {
     expect("main with parameter", "fn main(a: i32) {}", 1);
     expect("main returning i32", "fn main() -> i32 { return 1; }", 1);
     expect("two mains report once", "fn main() {}\nfn main() {}", 1);
+    expect("loop var not visible after loop",
+           "fn main() { for i in 0..3 { } print(i); }", 1);
+    expect("unknown parameter type", "fn main() {}\nfn f(p: Missing) {}", 1);
+    expect("unknown field type", "fn main() {}\nstruct S { v: Missing }", 1);
+    expect("break outside loop", "fn main() { break; }", 1);
+    expect("continue outside loop", "fn main() { continue; }", 1);
     expect("initializer cannot see its own name", "fn main() { let x = x; }",
            1);
 }
@@ -90,21 +101,23 @@ void test_links() {
     Parser parser(source.data(), source.size());
     auto program = parser.parse();
     CollectingListener listener;
-    ScopeResolver resolver(listener);
+    ScopeResolver resolver(&listener);
     resolver.resolve(*program);
 
     const auto &main_fn =
-        static_cast<const FunctionDecl &>(*program->declarations()[0]);
+        dynamic_cast<const FunctionDecl &>(*program->declarations()[0]);
     const auto &statements = main_fn.body().statements();
     const auto &inner =
-        static_cast<const BlockStmt &>(*statements[1]).statements();
-    const auto &inner_let = static_cast<const VarDeclStmt &>(*inner[0]);
-    const auto &call = static_cast<const CallCastExpr &>(
-        static_cast<const ExprStmt &>(*inner[1]).expr());
-    const auto &init = static_cast<const BinaryExpr &>(inner_let.initializer());
+        dynamic_cast<const BlockStmt &>(*statements[1]).statements();
+    const auto &inner_let = dynamic_cast<const VarDeclStmt &>(*inner[0]);
+    const auto &call = dynamic_cast<const CallCastExpr &>(
+        dynamic_cast<const ExprStmt &>(*inner[1]).expr());
+    const auto &init =
+        dynamic_cast<const BinaryExpr &>(inner_let.initializer());
 
-    const Symbol *init_link = resolver.symbol_for(init.left());
-    const Symbol *use_link = resolver.symbol_for(*call.arguments()[0]);
+    const Symbol *init_link = resolver.get_symbol_for_node(&init.left());
+    const Symbol *use_link =
+        resolver.get_symbol_for_node(call.arguments()[0].get());
     if (init_link == nullptr ||
         init_link->declaration_node != statements[0].get()) {
         fail("links", "initializer did not link to the outer t");

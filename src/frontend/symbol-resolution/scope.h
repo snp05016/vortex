@@ -157,6 +157,8 @@ class ScopeResolver {
     void resolve_var_decl(const VarDeclStmt &var_decl);
     void resolve_stmt(const Stmt &stmt);
 
+    void declare_top_level(const Decl &decl);
+    void check_main();
     void resolve_decl(const Decl &decl);
 
     void resolve_expr(const Expr &expr);
@@ -165,9 +167,12 @@ class ScopeResolver {
     void resolve_block(const BlockStmt &block);
 
     void error(const Node *node, const std::string &message);
+    void error_at(SourceLocation loc, const std::string &message);
     void note(SourceLocation loc, const std::string &message);
     llvm::DenseMap<const Node *, const Symbol *> node_to_symbol_map_;
     ScopeStack scope_stack_;
     DiagnosticListener *listener_;
     std::size_t error_count_{0};
+    // how many loops enclose the statement being resolved, for break/continue
+    std::size_t loop_depth_{0};
 };
