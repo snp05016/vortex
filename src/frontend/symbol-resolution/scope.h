@@ -6,17 +6,18 @@
 #include "llvm/ADT/StringMap.h"
 #include <cassert>
 #include <deque>
+#include <iostream>
 #include <ranges>
 #include <string>
 #include <vector>
-
 enum class SymbolKind {
     Local,
     Function,
     Parameter,
     LoopVariable,
     Builtin,
-    Struct
+    Struct,
+    Field
 };
 
 struct Symbol {
@@ -99,6 +100,13 @@ class ScopeStack {
         return nullptr;
     }
 
+    // Read-only view of the scopes, outermost (global) first. Used by the
+    // debug printer.
+    [[nodiscard]] const std::vector<llvm::StringMap<const Symbol *>> &
+    scopes() const {
+        return scopes_;
+    }
+
   private:
     // StringMap stores pointers to Symbols that live stably in symbol_pool_
     std::vector<llvm::StringMap<const Symbol *>> scopes_;
@@ -119,16 +127,43 @@ class ScopeResolver {
         return error_count_ > 0;
     }
 
-    [[nodiscard]] const Symbol *get_symbol_for_node(const Node *node) const {
+    [[nodiscard("get symbol for node wasnt called")]] const Symbol *
+    get_symbol_for_node(const Node *node) const {
         auto const found = node_to_symbol_map_.find(node);
         return found != node_to_symbol_map_.end() ? found->second : nullptr;
     }
 
+    void insert_type(const Type *type, const Symbol *symbol) {
+        node_to_symbol_map_.insert({type, symbol});
+    }
+
+    void insert_variable(const Expr *expr, const Symbol *symbol) {
+        node_to_symbol_map_.insert({expr, symbol});
+    }
+
+    [[nodiscard]] const ScopeStack &scope_stack() const {
+        return scope_stack_;
+    }
+
   private:
-    void resolve_decl(const Decl &decl);
+    void resolve_assignment_stmt(const AssignmentStatement &assignment_stmt);
+    void resolve_ret_stmt(const RetStmt &ret_stmt);
+    void resolve_expr_stmt(const ExprStmt &expr_stmt);
+    void resolve_break_stmt(const BreakStmt &break_stmt);
+    void resolve_continue_stmt(const ContinueStmt &continue_stmt);
+    void resolve_if_stmt(const IfStmt &if_stmt);
+    void resolve_while_stmt(const WhileStmt &while_stmt);
+    void resolve_for_stmt(const ForStmt &for_stmt);
+    void resolve_var_decl(const VarDeclStmt &var_decl);
     void resolve_stmt(const Stmt &stmt);
+
+    void resolve_decl(const Decl &decl);
+
     void resolve_expr(const Expr &expr);
+    void resolve_identifier(const Identifier &identifier, bool is_callee);
     void resolve_type(const Type &type);
+    void resolve_block(const BlockStmt &block);
+
     void error(const Node *node, const std::string &message);
     void note(SourceLocation loc, const std::string &message);
     llvm::DenseMap<const Node *, const Symbol *> node_to_symbol_map_;

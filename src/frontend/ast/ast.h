@@ -575,6 +575,7 @@ struct RetStmt : public Stmt {
         : Stmt(location), return_value_(std::move(return_value)) {
     }
 
+    // Null for a return statement without a value.
     [[nodiscard]] const Expr *return_value() const {
         return return_value_.get();
     }

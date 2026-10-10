@@ -1,6 +1,8 @@
 #include "frontend/debug/ast_debug_printer.h"
+#include "frontend/debug/symbol_table_debug_printer.h"
 #include "frontend/diagnostics/diagnostic_listener.h"
 #include "frontend/parser/parser.h"
+#include "frontend/symbol-resolution/scope.h"
 #include <array>
 #include <exception>
 #include <fstream>
@@ -21,7 +23,14 @@ bool print_ast(std::string_view title, std::string_view file_name,
         AstDebugPrinter const printer(std::cout);
         printer.print(*program);
         std::cout << '\n';
-        return true;
+        TextDiagnosticListener listener(std::cerr, file_name, source);
+        ScopeResolver resolver(&listener);
+        std::cout << "Resolving symbols...\n";
+        resolver.resolve(*program);
+        std::cout << "Symbol table:\n";
+        SymbolTableDebugPrinter const symbol_printer(std::cout);
+        symbol_printer.print(resolver.scope_stack());
+        return !resolver.had_errors();
     } catch (const ParserError &error) {
         TextDiagnosticListener listener(std::cerr, file_name, source);
         listener.report(

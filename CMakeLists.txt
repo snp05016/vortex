@@ -34,6 +34,7 @@ enable_testing()
 
 add_library(vortex_compiler
     src/frontend/debug/ast_debug_printer.cpp
+    src/frontend/debug/symbol_table_debug_printer.cpp
     src/frontend/diagnostics/diagnostic_listener.cpp
     src/frontend/lexer/lexer.cpp
     src/frontend/parser/parser.cpp
@@ -41,6 +42,7 @@ add_library(vortex_compiler
     src/frontend/parser/parser_statements.cpp
     src/frontend/parser/parser_declarations.cpp
     src/frontend/parser/parser_types.cpp
+    src/frontend/symbol-resolution/scope.cpp
     )
 target_include_directories(vortex_compiler PUBLIC src ${LLVM_INCLUDE_DIR})
 target_link_libraries(vortex_compiler PUBLIC
