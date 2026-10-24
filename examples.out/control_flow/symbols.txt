@@ -1,0 +1,34 @@
+Resolving symbols...
+
+<example:control flow>:1:1: error: program has no 'main' function
+  |
+1 | fn count() {
+  | ^
+Scope 4: 0 symbols
+
+Scope 3: 0 symbols
+
+Scope 2: 1 symbol
++-------+--------------+-----+--------+--------+
+| Name  | Kind         | Mut | Offset | Length |
++-------+--------------+-----+--------+--------+
+| index | LoopVariable | no  |     40 |      3 |
++-------+--------------+-----+--------+--------+
+
+Scope 2: 0 symbols
+
+Scope 1: 1 symbol
++-------+-------+-----+--------+--------+
+| Name  | Kind  | Mut | Offset | Length |
++-------+-------+-----+--------+--------+
+| total | Local | yes |     17 |      3 |
++-------+-------+-----+--------+--------+
+
+Scope 0 (global): 2 symbols
++-------+----------+-----+--------+--------+
+| Name  | Kind     | Mut | Offset | Length |
++-------+----------+-----+--------+--------+
+| count | Function | no  |      0 |      2 |
+| print | Builtin  | no  |      0 |      0 |
++-------+----------+-----+--------+--------+
+

@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.15)
 project(Vortex LANGUAGES CXX)
 
+# default to an optimized build (-O3 -DNDEBUG); pass -DCMAKE_BUILD_TYPE=Debug
+# for debugging
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 execute_process(
@@ -33,6 +39,7 @@ endif()
 enable_testing()
 
 add_library(vortex_compiler
+    src/frontend/debug/debug_output.cpp
     src/frontend/debug/ast_debug_printer.cpp
     src/frontend/debug/symbol_table_debug_printer.cpp
     src/frontend/diagnostics/diagnostic_listener.cpp
@@ -43,7 +50,8 @@ add_library(vortex_compiler
     src/frontend/parser/parser_declarations.cpp
     src/frontend/parser/parser_types.cpp
     src/frontend/symbol-resolution/scope.cpp
-    )
+        src/frontend/type-checking/type.h
+)
 target_include_directories(vortex_compiler PUBLIC src ${LLVM_INCLUDE_DIR})
 target_link_libraries(vortex_compiler PUBLIC
     ${LLVM_SUPPORT_LIBRARY}
@@ -54,6 +62,7 @@ target_compile_options(vortex_compiler PRIVATE -std=c++26)
 
 add_executable(vortex_debug
     src/main.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_debug PRIVATE vortex_compiler)
@@ -61,6 +70,7 @@ target_compile_options(vortex_debug PRIVATE -std=c++26)
 
 add_executable(vortex_lexer_tests
     tests/cpp/lexer_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_lexer_tests PRIVATE vortex_compiler)
@@ -70,6 +80,7 @@ add_test(NAME lexer_tests COMMAND vortex_lexer_tests)
 
 add_executable(vortex_parser_expression_tests
     tests/cpp/parser_expression_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_parser_expression_tests PRIVATE vortex_compiler)
@@ -79,6 +90,7 @@ add_test(NAME parser_expression_tests COMMAND vortex_parser_expression_tests)
 
 add_executable(vortex_parser_type_tests
     tests/cpp/parser_type_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_parser_type_tests PRIVATE vortex_compiler)
@@ -88,6 +100,7 @@ add_test(NAME parser_type_tests COMMAND vortex_parser_type_tests)
 
 add_executable(vortex_parser_statement_tests
     tests/cpp/parser_statement_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_parser_statement_tests PRIVATE vortex_compiler)
@@ -97,6 +110,7 @@ add_test(NAME parser_statement_tests COMMAND vortex_parser_statement_tests)
 
 add_executable(vortex_parser_declaration_tests
     tests/cpp/parser_declaration_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_parser_declaration_tests PRIVATE vortex_compiler)
@@ -106,6 +120,8 @@ add_test(NAME parser_declaration_tests COMMAND vortex_parser_declaration_tests)
 
 add_executable(vortex_ast_debug_printer_tests
     tests/cpp/ast_debug_printer_tests.cpp
+        src/frontend/type-checking/type.h
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_ast_debug_printer_tests PRIVATE vortex_compiler)
@@ -115,6 +131,7 @@ add_test(NAME ast_debug_printer_tests COMMAND vortex_ast_debug_printer_tests)
 
 add_executable(vortex_scope_resolver_tests
     tests/cpp/scope_resolver_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_scope_resolver_tests PRIVATE vortex_compiler)
@@ -124,6 +141,7 @@ add_test(NAME scope_resolver_tests COMMAND vortex_scope_resolver_tests)
 
 add_executable(vortex_vx_fixture_tests
     tests/cpp/vx_fixture_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_vx_fixture_tests PRIVATE vortex_compiler)
@@ -136,6 +154,7 @@ add_test(NAME vx_fixture_tests COMMAND vortex_vx_fixture_tests)
 
 add_executable(vortex_diagnostic_listener_tests
     tests/cpp/diagnostic_listener_tests.cpp
+        src/frontend/type-checking/type.h
 )
 
 target_link_libraries(vortex_diagnostic_listener_tests PRIVATE vortex_compiler)

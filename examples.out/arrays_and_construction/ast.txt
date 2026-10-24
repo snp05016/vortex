@@ -1,0 +1,64 @@
+=== arrays and construction ===
+
+Source:
+struct Point { x: f32, y: f32 }
+fn values() {
+    let origin = Point { x: 0.0, y: 0.0 };
+    let numbers: [i32; 3] = [1, 2, 3];
+    let zeros = [0; 2, 2];
+    print(origin.x, numbers[0]);
+}
+
+AST:
+Program
+├── StructDecl name=Point @0:6
+│   ├── Field name=x @15:1
+│   │   └── PrimitiveType name=f32 @18:3
+│   └── Field name=y @23:1
+│       └── PrimitiveType name=f32 @26:3
+└── FunctionDecl name=values @32:2
+    ├── Parameters
+    ├── ReturnType
+    │   └── PrimitiveType name=void @32:2
+    └── Body
+        └── BlockStmt @44:1
+            ├── VarDeclStmt name=origin mutable=false @50:3
+            │   └── Initializer
+            │       └── StructConstructionExpr name=Point @63:5
+            │           ├── Field name=x
+            │           │   └── Literal value=0 @74:3
+            │           └── Field name=y
+            │               └── Literal value=0 @82:3
+            ├── VarDeclStmt name=numbers mutable=false @93:3
+            │   ├── Type
+            │   │   └── ArrayType @106:1
+            │   │       ├── ElementType
+            │   │       │   └── PrimitiveType name=i32 @107:3
+            │   │       └── Dimensions
+            │   │           └── Literal value=3 @112:1
+            │   └── Initializer
+            │       └── ArrayExpr @117:1
+            │           ├── Literal value=1 @118:1
+            │           ├── Literal value=2 @121:1
+            │           └── Literal value=3 @124:1
+            ├── VarDeclStmt name=zeros mutable=false @132:3
+            │   └── Initializer
+            │       └── RepeatArrayExpr @144:1
+            │           ├── Value
+            │           │   └── Literal value=0 @145:1
+            │           └── Dimensions
+            │               ├── Literal value=2 @148:1
+            │               └── Literal value=2 @151:1
+            └── ExprStmt @159:5
+                └── CallExpr @159:5
+                    ├── Callee
+                    │   └── Identifier name=print @159:5
+                    └── Arguments
+                        ├── FieldAccessExpr field=x @165:6
+                        │   └── Identifier name=origin @165:6
+                        └── IndexExpr @175:7
+                            ├── Collection
+                            │   └── Identifier name=numbers @175:7
+                            └── Indices
+                                └── Literal value=0 @183:1
+

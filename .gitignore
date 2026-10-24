@@ -38,3 +38,9 @@ ruvector.db*
 .idea/
 *.swp
 *.swo
+
+# local performance report
+/perf-report.md
+
+# compiler debug dumps
+/output/

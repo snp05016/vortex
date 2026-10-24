@@ -1,0 +1,27 @@
+=== function and expression ===
+
+Source:
+fn main() {
+    let value: i32 = 2 + 3 * 4;
+    return;
+}
+
+AST:
+Program
+└── FunctionDecl name=main @0:2
+    ├── Parameters
+    ├── ReturnType
+    │   └── PrimitiveType name=void @0:2
+    └── Body
+        └── BlockStmt @10:1
+            ├── VarDeclStmt name=value mutable=false @16:3
+            │   ├── Type
+            │   │   └── PrimitiveType name=i32 @27:3
+            │   └── Initializer
+            │       └── BinaryExpr operator="+" @35:1
+            │           ├── Literal value=2 @33:1
+            │           └── BinaryExpr operator="*" @39:1
+            │               ├── Literal value=3 @37:1
+            │               └── Literal value=4 @41:1
+            └── ReturnStmt @48:6
+

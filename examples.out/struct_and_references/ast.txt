@@ -1,0 +1,28 @@
+=== struct and references ===
+
+Source:
+struct Point { x: f32, y: f32, }
+fn read_x(point: &Point) -> f32 {
+    return point.x;
+}
+
+AST:
+Program
+├── StructDecl name=Point @0:6
+│   ├── Field name=x @15:1
+│   │   └── PrimitiveType name=f32 @18:3
+│   └── Field name=y @23:1
+│       └── PrimitiveType name=f32 @26:3
+└── FunctionDecl name=read_x @33:2
+    ├── Parameters
+    │   └── Parameter name=point @43:5
+    │       └── ReferenceType mutable=false @50:1
+    │           └── NamedType name=Point @51:5
+    ├── ReturnType
+    │   └── PrimitiveType name=f32 @61:3
+    └── Body
+        └── BlockStmt @65:1
+            └── ReturnStmt @71:6
+                └── FieldAccessExpr field=x @78:5
+                    └── Identifier name=point @78:5
+

@@ -1,0 +1,58 @@
+=== control flow ===
+
+Source:
+fn count() {
+    let mut total = 0;
+    for index in 0..=3 {
+        if index == 2 { continue; }
+        total += index;
+    }
+    while total < 10 { total += 1; }
+}
+
+AST:
+Program
+└── FunctionDecl name=count @0:2
+    ├── Parameters
+    ├── ReturnType
+    │   └── PrimitiveType name=void @0:2
+    └── Body
+        └── BlockStmt @11:1
+            ├── VarDeclStmt name=total mutable=true @17:3
+            │   └── Initializer
+            │       └── Literal value=0 @33:1
+            ├── ForStmt variable=index @40:3
+            │   ├── Iterable
+            │   │   └── RangeExpr inclusive=true @54:3
+            │   │       ├── Start
+            │   │       │   └── Literal value=0 @53:1
+            │   │       └── End
+            │   │           └── Literal value=3 @57:1
+            │   └── Body
+            │       └── BlockStmt @59:1
+            │           ├── IfStmt @69:2
+            │           │   ├── Condition
+            │           │   │   └── BinaryExpr operator="==" @78:2
+            │           │   │       ├── Identifier name=index @72:5
+            │           │   │       └── Literal value=2 @81:1
+            │           │   └── Then
+            │           │       └── BlockStmt @83:1
+            │           │           └── ContinueStmt @85:8
+            │           └── AssignmentStmt operator="+=" @105:5
+            │               ├── Target
+            │               │   └── Identifier name=total @105:5
+            │               └── Value
+            │                   └── Identifier name=index @114:5
+            └── WhileStmt @131:5
+                ├── Condition
+                │   └── BinaryExpr operator="<" @143:1
+                │       ├── Identifier name=total @137:5
+                │       └── Literal value=10 @145:2
+                └── Body
+                    └── BlockStmt @148:1
+                        └── AssignmentStmt operator="+=" @150:5
+                            ├── Target
+                            │   └── Identifier name=total @150:5
+                            └── Value
+                                └── Literal value=1 @159:1
+

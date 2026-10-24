@@ -1,13 +1,14 @@
 #include "frontend/debug/ast_debug_printer.h"
+#include "frontend/debug/debug_output.h"
 #include "frontend/parser/parser.h"
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace {
 int failures = 0;
@@ -60,40 +61,56 @@ void test_invalid_fixture(std::string_view path) {
 } // namespace
 
 int main() {
-    const std::vector<std::string_view> valid = {
-        "tests/vx/valid/comment_only.vx",
-        "tests/vx/valid/declarations_and_types.vx",
-        "tests/vx/valid/expression_edges.vx",
-        "tests/vx/valid/control_flow_edges.vx",
-        "tests/vx/valid/literal_edges.vx",
-        "tests/vx/valid/postfix_and_assignments.vx",
-        "tests/vx/valid/syntax_semantic_boundary.vx",
-    };
-    const std::vector<std::string_view> invalid = {
-        "tests/vx/invalid/empty_struct.vx",
-        "tests/vx/invalid/trailing_parameter_comma.vx",
-        "tests/vx/invalid/top_level_statement.vx",
-        "tests/vx/invalid/missing_array_dimension.vx",
-        "tests/vx/invalid/chained_comparison.vx",
-        "tests/vx/invalid/invalid_assignment_target.vx",
-        "tests/vx/invalid/trailing_call_comma.vx",
-        "tests/vx/invalid/unbraced_else.vx",
-        "tests/vx/invalid/trailing_repeat_dimension.vx",
-        "tests/vx/invalid/unterminated_function.vx",
-        "tests/vx/invalid/legacy_struct_syntax.vx",
-    };
-
-    for (std::string_view const path : valid) {
-        test_valid_fixture(path);
+    std::size_t count = 0;
+    for (const auto &entry : std::filesystem::directory_iterator(
+             std::filesystem::path(VORTEX_SOURCE_DIR) / "tests/vx")) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".vx") {
+            continue;
+        }
+        const std::string path = "tests/vx/" + entry.path().filename().string();
+        const std::string source = read_fixture(path);
+        // These fixtures assert parser behavior; resolution diagnostics are for
+        // inspection.
+        const auto out_dir = std::filesystem::path(VORTEX_SOURCE_DIR) /
+                             "output" / std::filesystem::path(path).stem();
+        (void)write_debug_output(path, path, source, out_dir);
+        for (const auto &name : {std::filesystem::path(path).filename(),
+                                 std::filesystem::path("ast.txt"),
+                                 std::filesystem::path("symbols.txt")}) {
+            if (!std::filesystem::is_regular_file(out_dir / name)) {
+                fail(path, "missing debug output file");
+            }
+        }
+        const std::string output_path =
+            "output/" + entry.path().stem().string() + "/";
+        if (read_fixture(output_path + entry.path().filename().string()) !=
+            source) {
+            fail(path, "output source differs from fixture");
+        }
+        const std::string ast = read_fixture(output_path + "ast.txt");
+        const std::string symbols = read_fixture(output_path + "symbols.txt");
+        if (entry.path().filename().string().starts_with("invalid_")) {
+            if (!ast.contains("error:") || !symbols.contains("Skipped:")) {
+                fail(path,
+                     "missing parse diagnostic or skipped-pass explanation");
+            }
+            test_invalid_fixture(path);
+        } else {
+            if (!ast.contains("AST:") ||
+                !symbols.contains("Resolving symbols")) {
+                fail(path, "missing AST or symbol-resolution output");
+            }
+            test_valid_fixture(path);
+        }
+        ++count;
     }
-    for (std::string_view const path : invalid) {
-        test_invalid_fixture(path);
+    if (count == 0) {
+        fail("fixtures", "no .vx fixtures found");
     }
     if (failures != 0) {
         std::cerr << failures << " fixture test(s) failed\n";
         return EXIT_FAILURE;
     }
-    std::cout << valid.size() << " valid and " << invalid.size()
-              << " invalid Vortex fixtures passed\n";
+    std::cout << count << " Vortex fixtures passed\n";
     return EXIT_SUCCESS;
 }

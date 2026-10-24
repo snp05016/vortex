@@ -1,0 +1,30 @@
+Resolving symbols...
+
+<example:struct and references>:1:1: error: program has no 'main' function
+  |
+1 | struct Point { x: f32, y: f32, }
+  | ^
+Scope 1: 2 symbols
++------+-------+-----+--------+--------+
+| Name | Kind  | Mut | Offset | Length |
++------+-------+-----+--------+--------+
+| x    | Field | no  |     15 |      1 |
+| y    | Field | no  |     23 |      1 |
++------+-------+-----+--------+--------+
+
+Scope 1: 1 symbol
++-------+-----------+-----+--------+--------+
+| Name  | Kind      | Mut | Offset | Length |
++-------+-----------+-----+--------+--------+
+| point | Parameter | yes |     43 |      5 |
++-------+-----------+-----+--------+--------+
+
+Scope 0 (global): 3 symbols
++--------+----------+-----+--------+--------+
+| Name   | Kind     | Mut | Offset | Length |
++--------+----------+-----+--------+--------+
+| Point  | Struct   | no  |      0 |      6 |
+| print  | Builtin  | no  |      0 |      0 |
+| read_x | Function | no  |     33 |      2 |
++--------+----------+-----+--------+--------+
+
