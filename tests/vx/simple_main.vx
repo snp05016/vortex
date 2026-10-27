@@ -1,0 +1,5 @@
+fn main() {
+  let num = 10;
+  let count: i32 = 10+2;
+  let result: i32 = num + count;
+}

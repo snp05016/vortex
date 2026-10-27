@@ -3,7 +3,8 @@
 // file
 #include <cstddef> // for size_t
 #include <string>
-enum class TokenKind { // Using an enum because the token kinds are fixed.
+enum class TokenKind : std::uint8_t { // Using an enum because the token kinds
+                                      // are fixed.
     // Keywords
     KW_FN,     // "fn"
     KW_LET,    // "let"
