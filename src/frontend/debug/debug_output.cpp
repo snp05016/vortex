@@ -3,6 +3,7 @@
 #include "frontend/diagnostics/diagnostic_listener.h"
 #include "frontend/parser/parser.h"
 #include "frontend/symbol-resolution/scope.h"
+#include "frontend/type-checking/type.h"
 #include "symbol_table_debug_printer.h"
 #include <fstream>
 #include <iostream>
@@ -66,6 +67,15 @@ bool open_output(std::ofstream &file, const std::filesystem::path &path) {
 }
 
 } // namespace
+
+static bool type_checker_pass(std::ostream &out, std::string_view file_name,
+                              std::string_view source, const Program &program,
+                              const ScopeResolver &resolver) {
+    TextDiagnosticListener listener(out, file_name, source);
+    TypeChecker checker(&listener, resolver);
+    checker.check(program);
+    return !checker.had_errors();
+}
 
 // runs every pass in order, stopping at the first one that fails. Each pass
 // writes its own file into `out_dir`: ast.txt and symbols.txt.

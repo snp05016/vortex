@@ -1,5 +1,5 @@
 #pragma once
-#include "../ast/ast.h"
+#include "../ast/ast_walker.h"
 #include "../diagnostics/diagnostic_listener.h"
 #include "../lexer/token.h"
 #include "llvm/ADT/DenseMap.h"
@@ -129,7 +129,7 @@ class ScopeStack {
 };
 
 // Resolves symbols in the AST using a stack of scopes.
-class ScopeResolver {
+class ScopeResolver : private AstWalker {
   public:
     // creating a listener to report errors and warning during sym res
     explicit ScopeResolver(DiagnosticListener *listener) : listener_(listener) {
@@ -165,25 +165,26 @@ class ScopeResolver {
     }
 
   private:
-    void resolve_assignment_stmt(const AssignmentStatement &assignment_stmt);
-    void resolve_ret_stmt(const RetStmt &ret_stmt);
-    void resolve_expr_stmt(const ExprStmt &expr_stmt);
-    void resolve_break_stmt(const BreakStmt &break_stmt);
-    void resolve_continue_stmt(const ContinueStmt &continue_stmt);
-    void resolve_if_stmt(const IfStmt &if_stmt);
-    void resolve_while_stmt(const WhileStmt &while_stmt);
-    void resolve_for_stmt(const ForStmt &for_stmt);
-    void resolve_var_decl(const VarDeclStmt &var_decl);
-    void resolve_stmt(const Stmt &stmt);
+    void visit(const Decl &decl) override;
+    void visit(const FunctionDecl &function) override;
+    void visit(const StructDecl &structure) override;
+    void visit(const Stmt &stmt) override;
+    void visit(const BlockStmt &block) override;
+    void visit(const VarDeclStmt &var_decl) override;
+    void visit(const WhileStmt &while_stmt) override;
+    void visit(const ForStmt &for_stmt) override;
+    void visit(const BreakStmt &break_stmt) override;
+    void visit(const ContinueStmt &continue_stmt) override;
+    void visit(const Expr &expr) override;
+    void visit(const Identifier &identifier) override;
+    void visit(const CallCastExpr &call) override;
+    void visit(const StructConstructionExpr &construction) override;
+    void visit(const Type &type) override;
+    void visit(const StructType &type) override;
 
     void declare_top_level(const Decl &decl);
     void check_main();
-    void resolve_decl(const Decl &decl);
-
-    void resolve_expr(const Expr &expr);
     void resolve_identifier(const Identifier &identifier, bool is_callee);
-    void resolve_type(const Type &type);
-    void resolve_block(const BlockStmt &block);
 
     void error(const Node *node, const std::string &message);
     void error_at(SourceLocation loc, const std::string &message);

@@ -39,6 +39,7 @@ endif()
 enable_testing()
 
 add_library(vortex_compiler
+    src/frontend/ast/ast_walker.cpp
     src/frontend/debug/debug_output.cpp
     src/frontend/debug/ast_debug_printer.cpp
     src/frontend/debug/symbol_table_debug_printer.cpp
@@ -50,6 +51,7 @@ add_library(vortex_compiler
     src/frontend/parser/parser_declarations.cpp
     src/frontend/parser/parser_types.cpp
     src/frontend/symbol-resolution/scope.cpp
+    src/frontend/type-checking/type.cpp
         src/frontend/type-checking/type.h
 )
 target_include_directories(vortex_compiler PUBLIC src ${LLVM_INCLUDE_DIR})
@@ -138,6 +140,11 @@ target_link_libraries(vortex_scope_resolver_tests PRIVATE vortex_compiler)
 target_compile_options(vortex_scope_resolver_tests PRIVATE -std=c++26)
 
 add_test(NAME scope_resolver_tests COMMAND vortex_scope_resolver_tests)
+
+add_executable(vortex_type_checker_tests tests/cpp/type_checker_tests.cpp)
+target_link_libraries(vortex_type_checker_tests PRIVATE vortex_compiler)
+target_compile_options(vortex_type_checker_tests PRIVATE -std=c++26)
+add_test(NAME type_checker_tests COMMAND vortex_type_checker_tests)
 
 add_executable(vortex_vx_fixture_tests
     tests/cpp/vx_fixture_tests.cpp

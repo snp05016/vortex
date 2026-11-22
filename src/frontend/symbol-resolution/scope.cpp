@@ -25,9 +25,7 @@ void ScopeResolver::resolve(const Program &program) {
     }
     check_main();
     // pass 2: resolve types and bodies now that every top-level name exists
-    for (const auto &declaration : program.declarations()) {
-        resolve_decl(*declaration);
-    }
+    walk(program);
 }
 
 void ScopeResolver::declare_top_level(const Decl &decl) {
@@ -70,175 +68,86 @@ void ScopeResolver::check_main() {
     }
 }
 
-void ScopeResolver::resolve_decl(const Decl &decl) {
-    if (const auto *function_decl = dynamic_cast<const FunctionDecl *>(&decl)) {
-        // types are resolved before the parameters are declared, so a
-        // parameter name can't hide a type name
-        for (const auto &param : function_decl->parameters()) {
-            resolve_type(param.param_type());
-        }
-        resolve_type(function_decl->return_type());
+void ScopeResolver::visit(const Decl &decl) {
+    error(&decl, "unknown declaration kind");
+}
 
-        // the parameters and the top level of the body share one scope
-        scope_stack_.enter_scope();
-        for (const auto &param : function_decl->parameters()) {
-            if (const Symbol *clash =
-                    scope_stack_.check_illegal_shadow(param.param_name())) {
-                error(&param, "parameter '" + param.param_name() +
-                                  "' shadows a top-level declaration");
-                note(clash->location, "previously declared here");
-            }
-            if (!scope_stack_.declare(param.param_name(), SymbolKind::Parameter,
-                                      param.location(), &param, true)) {
-                error(&param, "redeclaration of parameter '" +
-                                  param.param_name() + "'");
-            }
+void ScopeResolver::visit(const FunctionDecl &function) {
+    // Resolve the signature in the outer scope before declaring parameters.
+    for (const auto &param : function.parameters()) {
+        walk(param);
+    }
+    walk(function.return_type());
+
+    // Parameters and the outermost statements share one scope.
+    scope_stack_.enter_scope();
+    for (const auto &param : function.parameters()) {
+        if (const Symbol *clash =
+                scope_stack_.check_illegal_shadow(param.param_name())) {
+            error(&param, "parameter '" + param.param_name() +
+                              "' shadows a top-level declaration");
+            note(clash->location, "previously declared here");
         }
-        for (const auto &statement : function_decl->body().statements()) {
-            resolve_stmt(*statement);
+        if (!scope_stack_.declare(param.param_name(), SymbolKind::Parameter,
+                                  param.location(), &param, true)) {
+            error(&param,
+                  "redeclaration of parameter '" + param.param_name() + "'");
         }
-        scope_stack_.exit_scope();
-    } else if (const auto *struct_decl =
-                   dynamic_cast<const StructDecl *>(&decl)) {
-        // field types resolve in the outer scope, where the field names
-        // aren't visible: `struct A { B: B }` means the type B
-        for (const auto &field : struct_decl->fields()) {
-            resolve_type(field.field_type());
+    }
+    AstWalker::visit(function.body());
+    scope_stack_.exit_scope();
+}
+
+void ScopeResolver::visit(const StructDecl &structure) {
+    // Resolve field types in the outer scope, where field names are invisible.
+    AstWalker::visit(structure);
+
+    // This scope is only used to catch duplicate field names.
+    scope_stack_.enter_scope();
+    for (const auto &field : structure.fields()) {
+        if (!scope_stack_.declare(field.field_name(), SymbolKind::Field,
+                                  field.location(), &field)) {
+            error(&field,
+                  "redeclaration of field '" + field.field_name() + "'");
         }
-        // the scope only exists to catch duplicate field names
-        scope_stack_.enter_scope();
-        for (const auto &field : struct_decl->fields()) {
-            if (!scope_stack_.declare(field.field_name(), SymbolKind::Field,
-                                      field.location(), &field)) {
-                error(&field,
-                      "redeclaration of field '" + field.field_name() + "'");
-            }
+    }
+    scope_stack_.exit_scope();
+}
+
+void ScopeResolver::visit(const Stmt &stmt) {
+    error(&stmt, "unknown statement kind");
+}
+
+void ScopeResolver::visit(const Expr &expr) {
+    error(&expr, "unknown expression kind");
+}
+
+void ScopeResolver::visit(const Identifier &identifier) {
+    resolve_identifier(identifier, /*is_callee=*/false);
+}
+
+void ScopeResolver::visit(const CallCastExpr &call) {
+    if (const auto *callee =
+            dynamic_cast<const Identifier *>(&call.function())) {
+        resolve_identifier(*callee, /*is_callee=*/true);
+        for (const auto &argument : call.arguments()) {
+            walk(*argument);
         }
-        scope_stack_.exit_scope();
     } else {
-        error(&decl, "unknown declaration kind");
+        AstWalker::visit(call);
     }
 }
 
-void ScopeResolver::resolve_stmt(const Stmt &stmt) {
-    if (const auto *block = dynamic_cast<const BlockStmt *>(&stmt)) {
-        resolve_block(*block);
-    } else if (const auto *if_stmt = dynamic_cast<const IfStmt *>(&stmt)) {
-        resolve_if_stmt(*if_stmt);
-    } else if (const auto *while_stmt =
-                   dynamic_cast<const WhileStmt *>(&stmt)) {
-        resolve_while_stmt(*while_stmt);
-    } else if (const auto *for_stmt = dynamic_cast<const ForStmt *>(&stmt)) {
-        resolve_for_stmt(*for_stmt);
-    } else if (const auto *var_decl =
-                   dynamic_cast<const VarDeclStmt *>(&stmt)) {
-        resolve_var_decl(*var_decl);
-    } else if (const auto *assignment =
-                   dynamic_cast<const AssignmentStatement *>(&stmt)) {
-        resolve_assignment_stmt(*assignment);
-    } else if (const auto *ret_stmt = dynamic_cast<const RetStmt *>(&stmt)) {
-        resolve_ret_stmt(*ret_stmt);
-    } else if (const auto *expr_stmt = dynamic_cast<const ExprStmt *>(&stmt)) {
-        resolve_expr_stmt(*expr_stmt);
-    } else if (const auto *break_stmt =
-                   dynamic_cast<const BreakStmt *>(&stmt)) {
-        resolve_break_stmt(*break_stmt);
-    } else if (const auto *continue_stmt =
-                   dynamic_cast<const ContinueStmt *>(&stmt)) {
-        resolve_continue_stmt(*continue_stmt);
-    } else {
-        error(&stmt, "unknown statement kind");
+void ScopeResolver::visit(const StructConstructionExpr &construction) {
+    const Symbol *symbol = scope_stack_.lookup(construction.struct_name());
+    if (!symbol) {
+        error(&construction,
+              "unknown struct type '" + construction.struct_name() + "'");
+    } else if (symbol->kind != SymbolKind::Struct) {
+        error(&construction,
+              "'" + construction.struct_name() + "' is not a struct type");
     }
-}
-
-/* @llm written comment
- * resolve_expr walks an expression tree and hands every name it finds to
- * resolve_identifier. Most node kinds just recurse into their children:
- *
- *   let y = (x + 1) * f(x);   // visits x, x, and f
- *
- * Literals have no names, so they're skipped. Field names (`p.x`) aren't
- * looked up here, since they depend on p's struct type and get checked later.
- */
-void ScopeResolver::resolve_expr(const Expr &expr) {
-    if (const auto *binary_expr = dynamic_cast<const BinaryExpr *>(&expr)) {
-        // `a + b`: both sides can contain names
-        resolve_expr(binary_expr->left());
-        resolve_expr(binary_expr->right());
-    } else if (const auto *unary_expr = dynamic_cast<const Unary *>(&expr)) {
-        // `-x`, `!x`, `&x`: only the operand can contain names
-        resolve_expr(unary_expr->operand());
-    } else if (dynamic_cast<const Literal *>(&expr) != nullptr) {
-        // nothing to resolve for literals
-    } else if (const auto *identifier =
-                   dynamic_cast<const Identifier *>(&expr)) {
-        // a bare name used as a value, e.g. the `x` in `x + 1`
-        resolve_identifier(*identifier, /*is_callee=*/false);
-    } else if (const auto *group = dynamic_cast<const Grp *>(&expr)) {
-        // `(x + 1)`: parentheses add no scope, just look inside
-        resolve_expr(group->expr());
-    } else if (const auto *range = dynamic_cast<const RangeExpr *>(&expr)) {
-        // `0..n`: both ends can contain names
-        resolve_expr(range->start());
-        resolve_expr(range->end());
-    } else if (const auto *call = dynamic_cast<const CallCastExpr *>(&expr)) {
-        // `f(x)`: the callee may be a function or builtin, unlike a plain
-        // identifier, so it takes the is_callee path
-        if (const auto *callee =
-                dynamic_cast<const Identifier *>(&call->function())) {
-            resolve_identifier(*callee, /*is_callee=*/true);
-        } else {
-            // something like `make()(x)`, where the callee is itself an
-            // expression
-            resolve_expr(call->function());
-        }
-        for (const auto &argument : call->arguments()) {
-            resolve_expr(*argument);
-        }
-    } else if (const auto *cast = dynamic_cast<const CastExpr *>(&expr)) {
-        // `i32(x)`: the target type is a keyword, only the operand needs
-        // resolving
-        resolve_expr(cast->operand());
-    } else if (const auto *index = dynamic_cast<const IndexExpr *>(&expr)) {
-        // `arr[i][j]`: resolve the collection and every index
-        resolve_expr(index->collection());
-        for (const auto &idx : index->indices()) {
-            resolve_expr(*idx);
-        }
-    } else if (const auto *field_access =
-                   dynamic_cast<const FieldAccessExpr *>(&expr)) {
-        // `p.x`: the field name is checked against the struct type later
-        resolve_expr(field_access->object());
-    } else if (const auto *array = dynamic_cast<const ArrayExpr *>(&expr)) {
-        // `[a, b, c]`: each element is its own expression
-        for (const auto &element : array->elements()) {
-            resolve_expr(*element);
-        }
-    } else if (const auto *repeat =
-                   dynamic_cast<const RepeatArrayExpr *>(&expr)) {
-        // `[0; n]`: the repeated value and the size expressions
-        resolve_expr(repeat->value());
-        for (const auto &dimension : repeat->dimensions()) {
-            resolve_expr(*dimension);
-        }
-    } else if (const auto *construction =
-                   dynamic_cast<const StructConstructionExpr *>(&expr)) {
-        // `Point { x: 1, y: 2 }`: the struct name must refer to a struct
-        const Symbol *symbol = scope_stack_.lookup(construction->struct_name());
-        if (!symbol) {
-            error(&expr,
-                  "unknown struct type '" + construction->struct_name() + "'");
-        } else if (symbol->kind != SymbolKind::Struct) {
-            error(&expr,
-                  "'" + construction->struct_name() + "' is not a struct type");
-        }
-        // field names are checked later, but the values can contain names
-        for (const auto &field : construction->fields()) {
-            resolve_expr(*field.second);
-        }
-    } else {
-        error(&expr, "unknown expression kind");
-    }
+    AstWalker::visit(construction);
 }
 
 /* @llm written comment
@@ -283,51 +192,24 @@ void ScopeResolver::resolve_identifier(const Identifier &identifier,
     }
 }
 
-void ScopeResolver::resolve_expr_stmt(const ExprStmt &expr_stmt) {
-    resolve_expr(expr_stmt.expr());
+void ScopeResolver::visit(const Type &type) {
+    error(&type, "unknown type kind");
 }
 
-void ScopeResolver::resolve_assignment_stmt(
-    const AssignmentStatement &assignment_stmt) {
-    resolve_expr(assignment_stmt.lhs());
-    resolve_expr(assignment_stmt.rhs());
-}
-
-void ScopeResolver::resolve_type(const Type &type) {
-    if (const auto *array_type = dynamic_cast<const ArrayType *>(&type)) {
-        resolve_type(array_type->element_type());
-        for (const auto &dimension : array_type->dimensions()) {
-            resolve_expr(*dimension);
-        }
-    } else if (const auto *reference_type =
-                   dynamic_cast<const ReferenceType *>(&type)) {
-        resolve_type(reference_type->referenced_type());
-    } else if (dynamic_cast<const PrimitiveType *>(&type) != nullptr) {
-        // nothing to resolve for primitive types
-    } else if (const auto *struct_type =
-                   dynamic_cast<const StructType *>(&type)) {
-        const Symbol *symbol = scope_stack_.lookup(struct_type->struct_name());
-        if (!symbol) {
-            error(&type,
-                  "unknown struct type '" + struct_type->struct_name() + "'");
-        } else if (symbol->kind != SymbolKind::Struct) {
-            error(&type,
-                  "'" + struct_type->struct_name() + "' is not a struct type");
-        } else {
-            insert_type(struct_type, symbol);
-        }
+void ScopeResolver::visit(const StructType &type) {
+    const Symbol *symbol = scope_stack_.lookup(type.struct_name());
+    if (!symbol) {
+        error(&type, "unknown struct type '" + type.struct_name() + "'");
+    } else if (symbol->kind != SymbolKind::Struct) {
+        error(&type, "'" + type.struct_name() + "' is not a struct type");
     } else {
-        error(&type, "unknown type kind");
+        insert_type(&type, symbol);
     }
 }
 
-void ScopeResolver::resolve_var_decl(const VarDeclStmt &var_decl) {
-    // `let x: T = ...`; the type is absent when it is inferred
-    if (const Type *declared_type = var_decl.var_type()) {
-        resolve_type(*declared_type);
-    }
-    // resolve the initializer first so `let x = x;` doesn't see the new x
-    resolve_expr(var_decl.initializer());
+void ScopeResolver::visit(const VarDeclStmt &var_decl) {
+    // Walk the annotation and initializer before declaring the local.
+    AstWalker::visit(var_decl);
     // illegal shadow: a local reusing a top-level function, struct or
     // builtin name, e.g.
     //   fn foo() { }
@@ -347,51 +229,35 @@ void ScopeResolver::resolve_var_decl(const VarDeclStmt &var_decl) {
     }
 }
 
-void ScopeResolver::resolve_block(const BlockStmt &block) {
+void ScopeResolver::visit(const BlockStmt &block) {
     scope_stack_.enter_scope();
-    for (const auto &statement : block.statements()) {
-        resolve_stmt(*statement);
-    }
+    AstWalker::visit(block);
     scope_stack_.exit_scope();
 }
 
-void ScopeResolver::resolve_break_stmt(const BreakStmt &break_stmt) {
+void ScopeResolver::visit(const BreakStmt &break_stmt) {
     if (loop_depth_ == 0) {
         error(&break_stmt, "'break' outside of a loop");
     }
 }
 
-void ScopeResolver::resolve_continue_stmt(const ContinueStmt &continue_stmt) {
+void ScopeResolver::visit(const ContinueStmt &continue_stmt) {
     if (loop_depth_ == 0) {
         error(&continue_stmt, "'continue' outside of a loop");
     }
 }
 
-void ScopeResolver::resolve_ret_stmt(const RetStmt &ret_stmt) {
-    if (const Expr *value = ret_stmt.return_value()) {
-        resolve_expr(*value);
-    }
-}
-
-void ScopeResolver::resolve_if_stmt(const IfStmt &if_stmt) {
-    resolve_expr(if_stmt.condition());
-    resolve_stmt(if_stmt.then_branch());
-    if (if_stmt.else_branch() != nullptr) {
-        resolve_stmt(*if_stmt.else_branch());
-    }
-}
-
-void ScopeResolver::resolve_while_stmt(const WhileStmt &while_stmt) {
-    resolve_expr(while_stmt.condition());
+void ScopeResolver::visit(const WhileStmt &while_stmt) {
+    walk(while_stmt.condition());
     loop_depth_++;
-    resolve_stmt(while_stmt.body());
+    walk(while_stmt.body());
     loop_depth_--;
 }
 
-void ScopeResolver::resolve_for_stmt(const ForStmt &for_stmt) {
+void ScopeResolver::visit(const ForStmt &for_stmt) {
     // the iterable is resolved outside the loop scope, so `for x in x` reads
     // the outer x, not the loop variable
-    resolve_expr(for_stmt.iterable());
+    walk(for_stmt.iterable());
     scope_stack_.enter_scope();
     if (const Symbol *clash =
             scope_stack_.check_illegal_shadow(for_stmt.var_name())) {
@@ -405,7 +271,7 @@ void ScopeResolver::resolve_for_stmt(const ForStmt &for_stmt) {
               "redeclaration of loop variable '" + for_stmt.var_name() + "'");
     }
     loop_depth_++;
-    resolve_stmt(for_stmt.body());
+    walk(for_stmt.body());
     loop_depth_--;
     scope_stack_.exit_scope();
 }
